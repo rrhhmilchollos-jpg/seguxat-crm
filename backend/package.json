@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "seed:director": "node scripts/seedDirector.js"
+    "seed:director": "node --no-experimental-require-module scripts/seedDirector.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
