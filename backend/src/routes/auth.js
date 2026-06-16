@@ -26,16 +26,11 @@ router.post("/login", async (req, res) => {
   }
 
   const employee = await Employee.findOne({ email: email.toLowerCase().trim() });
-  console.log("[login-debug] buscando email:", email.toLowerCase().trim());
-  console.log("[login-debug] encontrado:", employee ? employee.email : "NINGUNO");
-  console.log("[login-debug] db actual:", Employee.db.name);
   if (!employee || !employee.active) {
     return res.status(401).json({ error: "Credenciales incorrectas" });
   }
 
   const valid = await employee.comparePassword(password);
-  console.log("[login-debug] passwordHash en db:", employee.passwordHash);
-  console.log("[login-debug] password valida:", valid);
   if (!valid) {
     return res.status(401).json({ error: "Credenciales incorrectas" });
   }
