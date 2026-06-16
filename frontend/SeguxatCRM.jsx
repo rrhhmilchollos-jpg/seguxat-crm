@@ -1431,10 +1431,71 @@ function NewEmployeeModal({ token, onClose, onCreated }) {
 // ============================================================
 // DASHBOARD PERSONAL DE EMPLEADO (no-director)
 // ============================================================
+// Guía rápida de "cómo funciona tu día a día", adaptada a cada rol. Se
+// muestra siempre en el dashboard personal para que cualquier empleado
+// nuevo entienda el sistema sin depender de una explicación externa.
+const ROLE_GUIDES = {
+  televenta: {
+    summary: "Coordinas la agenda de visitas: confirmas con el cliente día y hora, y dejas todo anotado en el CRM para que el técnico sepa dónde ir.",
+    steps: [
+      { title: "1. Revisa solicitudes nuevas", detail: "Entran por la web o por teléfono. Las verás en Pipeline → columna \"Nuevo\"." },
+      { title: "2. Llama para ofrecer cita", detail: "Propón día y hora de visita técnica. Usa el teléfono de empresa, no el tuyo personal." },
+      { title: "3. Anota la visita en el CRM", detail: "Mueve el lead a \"Cita\" en el Pipeline y añade fecha/hora en Agenda." },
+      { title: "4. Confirma el día antes", detail: "Llama de nuevo para confirmar que la visita sigue en pie." },
+      { title: "5. Avisa de cambios", detail: "Si cancelan o cambian la hora, actualízalo en el CRM y avisa a dirección." },
+    ],
+  },
+  comercial: {
+    summary: "Generas y cierras ventas: buscas clientes nuevos, los visitas o llamas, y haces el seguimiento hasta firmar el contrato.",
+    steps: [
+      { title: "1. Revisa tu pipeline", detail: "Actualiza la fase de cualquier lead con el que hayas hablado." },
+      { title: "2. Prospección de contactos nuevos", detail: "Busca clientes potenciales en tu zona y date de alta como \"Nuevo lead\"." },
+      { title: "3. Llamadas o visitas", detail: "Presenta los kits de Seguxat y detecta interés real." },
+      { title: "4. Actualiza el CRM", detail: "Anota el resultado de cada contacto." },
+      { title: "5. Presupuestos pendientes", detail: "Prepara o envía las propuestas pendientes desde el Catálogo." },
+    ],
+  },
+  tecnico: {
+    summary: "Realizas las instalaciones y mantenimientos en casa del cliente, según la agenda que te asigne dirección o coordinación.",
+    steps: [
+      { title: "1. Revisa tu agenda del día", detail: "Visitas técnicas asignadas, con dirección y franja horaria." },
+      { title: "2. Confirma material necesario", detail: "Revisa el kit contratado por el cliente antes de salir." },
+      { title: "3. Realiza la instalación", detail: "Sigue el procedimiento estándar de Seguxat para cada kit." },
+      { title: "4. Marca la visita como completada", detail: "Actualiza el estado en el CRM al terminar." },
+      { title: "5. Reporta cualquier incidencia", detail: "Si algo no fue según lo previsto, anótalo y avisa a dirección." },
+    ],
+  },
+  soporte: {
+    summary: "Atiendes a clientes ya instalados: incidencias, dudas sobre su sistema, y coordinación con la Central Receptora de Alarmas (CRA).",
+    steps: [
+      { title: "1. Revisa incidencias abiertas", detail: "Mensajes o llamadas de clientes con problemas en su sistema." },
+      { title: "2. Diagnostica el problema", detail: "Determina si es un fallo técnico, de uso, o de facturación." },
+      { title: "3. Resuelve o escala", detail: "Si puedes resolverlo por teléfono, hazlo; si no, agenda visita técnica." },
+      { title: "4. Anota la resolución en el CRM", detail: "Deja constancia de qué se hizo y cuándo." },
+      { title: "5. Haz seguimiento", detail: "Confirma con el cliente que el problema quedó resuelto." },
+    ],
+  },
+  director: {
+    summary: "Tienes visión completa del negocio: empleados, pipeline, clientes y catálogo.",
+    steps: [],
+  },
+};
+
+// Datos de ejemplo para la sección "Próximas visitas" del dashboard de
+// Televenta/coordinación. Están claramente etiquetados como ejemplo: no
+// proceden del backend, solo ilustran cómo se verá la sección con datos
+// reales una vez haya solicitudes y visitas agendadas.
+const EXAMPLE_VISITS = [
+  { client: "María Fernández", phone: "612 345 678", date: "Mañana 10:00", plan: "Kit Hogar Total", status: "Confirmada" },
+  { client: "Pedro Soler", phone: "699 112 233", date: "Mañana 16:30", plan: "Kit Hogar Esencial", status: "Por confirmar" },
+  { client: "Comercial Vidal S.L.", phone: "961 22 33 44", date: "Pasado mañana 09:00", plan: "Negocio", status: "Confirmada" },
+];
+
 function EmployeeDashboardView({ token, currentUser }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showGuide, setShowGuide] = useState(true);
 
   async function load() {
     if (!token) { setLoading(false); setError("offline"); return; }
@@ -1467,13 +1528,15 @@ function EmployeeDashboardView({ token, currentUser }) {
   const pending = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done);
   const roleLabel = ROLE_LABELS[currentUser.role] || currentUser.role;
+  const guide = ROLE_GUIDES[currentUser.role];
+  const showVisitsExample = currentUser.role === "televenta";
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-slate-200 p-5">
         <h3 className="font-serif text-lg font-bold text-slate-900">Hola, {currentUser.name.split(" ")[0]}</h3>
         <p className="text-sm text-slate-500 mt-1">
-          {roleLabel} · {currentUser.zone || "Seguxat"}. Aquí tienes tus tareas asignadas para hoy.
+          {roleLabel} · {currentUser.zone || "Seguxat"}. Aquí tienes tus tareas asignadas y cómo funciona tu día a día.
         </p>
       </div>
 
@@ -1484,45 +1547,102 @@ function EmployeeDashboardView({ token, currentUser }) {
         </div>
       )}
 
-      {loading ? (
-        <div className="text-sm text-slate-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Cargando tareas...</div>
-      ) : tasks.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-sm text-slate-400">
-          Todavía no tienes tareas asignadas. Tu director te las irá añadiendo aquí.
+      {guide && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <button onClick={() => setShowGuide(!showGuide)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50">
+            <div className="flex items-center gap-2 text-left">
+              <span className="text-base">📘</span>
+              <span className="text-sm font-semibold text-slate-900">Cómo funciona tu puesto: {roleLabel}</span>
+            </div>
+            <span className="text-xs text-slate-400">{showGuide ? "Ocultar" : "Mostrar"}</span>
+          </button>
+          {showGuide && (
+            <div className="px-5 pb-5 border-t border-slate-100 pt-4">
+              <p className="text-sm text-slate-600 mb-4">{guide.summary}</p>
+              {guide.steps.length > 0 && (
+                <div className="space-y-2.5">
+                  {guide.steps.map((s, i) => (
+                    <div key={i} className="flex items-start gap-3 bg-slate-50 rounded-lg p-3">
+                      <div>
+                        <div className="text-sm font-medium text-slate-900">{s.title}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{s.detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <h4 className="text-sm font-semibold text-slate-700 mb-3">Pendientes ({pending.length})</h4>
-            <div className="space-y-2">
-              {pending.map((t) => (
-                <button key={t._id} onClick={() => toggleTask(t)}
-                  className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-amber-300">
-                  <div className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0" />
-                  <div>
-                    <div className="text-sm font-medium text-slate-900">{t.title}</div>
-                    {t.description && <div className="text-xs text-slate-500 mt-0.5">{t.description}</div>}
-                  </div>
-                </button>
-              ))}
-              {pending.length === 0 && <div className="text-xs text-slate-400 italic">¡Todo hecho! 🎉</div>}
-            </div>
+      )}
+
+      {showVisitsExample && (
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="text-sm font-semibold text-slate-700">Próximas visitas</h4>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Ejemplo ilustrativo</span>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <h4 className="text-sm font-semibold text-slate-700 mb-3">Completadas ({done.length})</h4>
-            <div className="space-y-2">
-              {done.map((t) => (
-                <button key={t._id} onClick={() => toggleTask(t)}
-                  className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-slate-300 opacity-60">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
-                  <div className="text-sm text-slate-500 line-through">{t.title}</div>
-                </button>
-              ))}
-              {done.length === 0 && <div className="text-xs text-slate-400 italic">Aún ninguna completada hoy.</div>}
-            </div>
+          <p className="text-xs text-slate-400 mb-4">Así se verá esta sección cuando haya visitas reales confirmadas. Los datos de abajo son solo de muestra.</p>
+          <div className="space-y-2">
+            {EXAMPLE_VISITS.map((v, i) => (
+              <div key={i} className="flex items-center justify-between border border-slate-100 rounded-lg p-3 opacity-75">
+                <div>
+                  <div className="text-sm font-medium text-slate-900">{v.client}</div>
+                  <div className="text-xs text-slate-500">{v.phone} · {v.plan}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-slate-700">{v.date}</div>
+                  <span className={`text-xs font-medium ${v.status === "Confirmada" ? "text-teal-600" : "text-amber-600"}`}>{v.status}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
+
+      <div>
+        <h4 className="text-sm font-semibold text-slate-700 mb-3">Tus tareas de hoy</h4>
+        {loading ? (
+          <div className="text-sm text-slate-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Cargando tareas...</div>
+        ) : tasks.length === 0 ? (
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-sm text-slate-400">
+            Todavía no tienes tareas asignadas. Tu director te las irá añadiendo aquí.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-5">
+              <h5 className="text-sm font-semibold text-slate-700 mb-3">Pendientes ({pending.length})</h5>
+              <div className="space-y-2">
+                {pending.map((t) => (
+                  <button key={t._id} onClick={() => toggleTask(t)}
+                    className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-amber-300">
+                    <div className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">{t.title}</div>
+                      {t.description && <div className="text-xs text-slate-500 mt-0.5">{t.description}</div>}
+                    </div>
+                  </button>
+                ))}
+                {pending.length === 0 && <div className="text-xs text-slate-400 italic">¡Todo hecho! 🎉</div>}
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-5">
+              <h5 className="text-sm font-semibold text-slate-700 mb-3">Completadas ({done.length})</h5>
+              <div className="space-y-2">
+                {done.map((t) => (
+                  <button key={t._id} onClick={() => toggleTask(t)}
+                    className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-slate-300 opacity-60">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
+                    <div className="text-sm text-slate-500 line-through">{t.title}</div>
+                  </button>
+                ))}
+                {done.length === 0 && <div className="text-xs text-slate-400 italic">Aún ninguna completada hoy.</div>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
