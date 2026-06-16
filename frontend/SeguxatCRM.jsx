@@ -15,7 +15,7 @@ import {
 // ============================================================
 // URL del backend de Seguxat CRM una vez desplegado (Railway/Vercel).
 // En desarrollo local sería algo como "http://localhost:4000/api".
-const API_BASE = "/api";
+const API_BASE = "https://seguxat-crm-production.up.railway.app/api";
 
 // Sustituye por el Client ID real de tu proyecto en Google Cloud Console
 // (APIs y servicios -> Credenciales -> ID de cliente de OAuth 2.0 -> Web).
