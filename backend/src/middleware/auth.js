@@ -16,6 +16,9 @@ export async function requireAuth(req, res, next) {
     if (!employee || !employee.active) {
       return res.status(401).json({ error: "Cuenta no encontrada o desactivada" });
     }
+    if (employee.suspended) {
+      return res.status(401).json({ error: "Tu cuenta está suspendida temporalmente. Contacta con dirección." });
+    }
 
     req.employee = employee;
     next();

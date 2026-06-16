@@ -74,6 +74,9 @@ router.post("/google-verify", async (req, res) => {
   if (!employee || !employee.active) {
     return res.status(401).json({ error: "Cuenta no encontrada o desactivada" });
   }
+  if (employee.suspended) {
+    return res.status(401).json({ error: "Tu cuenta está suspendida temporalmente. Contacta con dirección." });
+  }
 
   const ticket = await googleClient.verifyIdToken({
     idToken: googleIdToken,
@@ -112,6 +115,9 @@ router.post("/google-link", async (req, res) => {
   const employee = await Employee.findById(payload.sub);
   if (!employee || !employee.active) {
     return res.status(401).json({ error: "Cuenta no encontrada o desactivada" });
+  }
+  if (employee.suspended) {
+    return res.status(401).json({ error: "Tu cuenta está suspendida temporalmente. Contacta con dirección." });
   }
 
   const ticket = await googleClient.verifyIdToken({

@@ -14,6 +14,23 @@ router.get("/", onlyDirector, async (req, res) => {
   res.json({ employees });
 });
 
+// El propio empleado consulta y marca sus tareas (no necesita ser director).
+// IMPORTANTE: estas rutas "/me/..." deben declararse ANTES de las rutas
+// con parámetro "/:id/..." para que Express no interprete "me" como un id.
+router.get("/me/tasks", async (req, res) => {
+  res.json({ tasks: req.employee.tasks });
+});
+
+router.patch("/me/tasks/:taskId", async (req, res) => {
+  const { done } = req.body || {};
+  const task = req.employee.tasks.find((t) => t._id.toString() === req.params.taskId);
+  if (!task) return res.status(404).json({ error: "Tarea no encontrada" });
+
+  task.done = !!done;
+  await req.employee.save();
+  res.json({ tasks: req.employee.tasks });
+});
+
 /**
  * Dar de alta un nuevo empleado.
  *
@@ -62,19 +79,32 @@ router.post("/", onlyDirector, async (req, res) => {
   res.status(201).json({ employee, emailSent: emailResult.sent });
 });
 
-// Activar / desactivar un empleado
-router.patch("/:id/active", onlyDirector, async (req, res) => {
-  const { active } = req.body || {};
+// Suspender / reactivar temporalmente (distinto de desactivar permanentemente)
+router.patch("/:id/suspend", onlyDirector, async (req, res) => {
+  const { suspended } = req.body || {};
   const employee = await Employee.findById(req.params.id);
   if (!employee) return res.status(404).json({ error: "Empleado no encontrado" });
 
-  if (employee.role === ROLES.DIRECTOR && employee._id.equals(req.employee._id) && active === false) {
-    return res.status(400).json({ error: "No puedes desactivar tu propia cuenta de director" });
+  if (employee.role === ROLES.DIRECTOR && employee._id.equals(req.employee._id) && suspended) {
+    return res.status(400).json({ error: "No puedes suspender tu propia cuenta de director" });
   }
 
-  employee.active = !!active;
+  employee.suspended = !!suspended;
   await employee.save();
   res.json({ employee });
+});
+
+// Eliminar un empleado definitivamente
+router.delete("/:id", onlyDirector, async (req, res) => {
+  const employee = await Employee.findById(req.params.id);
+  if (!employee) return res.status(404).json({ error: "Empleado no encontrado" });
+
+  if (employee.role === ROLES.DIRECTOR && employee._id.equals(req.employee._id)) {
+    return res.status(400).json({ error: "No puedes eliminar tu propia cuenta de director" });
+  }
+
+  await Employee.deleteOne({ _id: employee._id });
+  res.json({ ok: true });
 });
 
 // Cambiar rol
@@ -93,6 +123,8 @@ router.patch("/:id/role", onlyDirector, async (req, res) => {
 });
 
 // Restablecer contraseña de un empleado (el director la introduce aquí mismo)
+// y se reenvía automáticamente por correo (cubre tanto "olvidé mi contraseña"
+// como un reseteo proactivo por parte del director).
 router.post("/:id/reset-password", onlyDirector, async (req, res) => {
   const { password } = req.body || {};
   if (!password || password.length < 8) {
@@ -113,6 +145,43 @@ router.post("/:id/reset-password", onlyDirector, async (req, res) => {
   });
 
   res.json({ ok: true, emailSent: emailResult.sent });
+});
+
+/**
+ * Tareas diarias asignadas por el director a un empleado concreto.
+ * Solo el director gestiona la lista (crear/marcar/eliminar); el propio
+ * empleado las consulta a través de GET /api/employees/me/tasks.
+ */
+router.get("/:id/tasks", onlyDirector, async (req, res) => {
+  const employee = await Employee.findById(req.params.id);
+  if (!employee) return res.status(404).json({ error: "Empleado no encontrado" });
+  res.json({ tasks: employee.tasks });
+});
+
+router.post("/:id/tasks", onlyDirector, async (req, res) => {
+  const { title, description, dueDate } = req.body || {};
+  if (!title) return res.status(400).json({ error: "El título de la tarea es obligatorio" });
+
+  const employee = await Employee.findById(req.params.id);
+  if (!employee) return res.status(404).json({ error: "Empleado no encontrado" });
+
+  employee.tasks.push({
+    title,
+    description: description || "",
+    dueDate: dueDate || null,
+    createdBy: req.employee._id,
+  });
+  await employee.save();
+  res.status(201).json({ tasks: employee.tasks });
+});
+
+router.delete("/:id/tasks/:taskId", onlyDirector, async (req, res) => {
+  const employee = await Employee.findById(req.params.id);
+  if (!employee) return res.status(404).json({ error: "Empleado no encontrado" });
+
+  employee.tasks = employee.tasks.filter((t) => t._id.toString() !== req.params.taskId);
+  await employee.save();
+  res.json({ tasks: employee.tasks });
 });
 
 export default router;

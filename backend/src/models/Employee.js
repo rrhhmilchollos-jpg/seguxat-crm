@@ -1,11 +1,35 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-// Roles disponibles en el CRM de Seguxat
+// Roles disponibles en el CRM de Seguxat (inspirados en la estructura de
+// Securitas Direct / Verisure: venta directa, televenta, instalación y
+// soporte/CRA, además del rol de dirección con acceso total).
 export const ROLES = {
   DIRECTOR: "director", // acceso total: gestionar empleados, ver todo, moderar
-  COMERCIAL: "comercial", // acceso a su propio pipeline, agenda y clientes asignados
+  COMERCIAL: "comercial", // venta directa / visitas — pipeline, agenda y clientes asignados
+  TELEVENTA: "televenta", // contacto telefónico de leads, primer filtro antes de pasar a comercial
+  TECNICO: "tecnico", // técnico instalador — agenda de instalaciones y mantenimientos
+  SOPORTE: "soporte", // soporte / CRA — atención postventa e incidencias de clientes
 };
+
+export const ROLE_LABELS = {
+  [ROLES.DIRECTOR]: "Director",
+  [ROLES.COMERCIAL]: "Comercial",
+  [ROLES.TELEVENTA]: "Televenta",
+  [ROLES.TECNICO]: "Técnico instalador",
+  [ROLES.SOPORTE]: "Soporte / CRA",
+};
+
+const taskSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, default: "" },
+    done: { type: Boolean, default: false },
+    dueDate: { type: Date, default: null },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Employee", default: null },
+  },
+  { timestamps: true }
+);
 
 const employeeSchema = new mongoose.Schema(
   {
@@ -22,7 +46,11 @@ const employeeSchema = new mongoose.Schema(
     googleLinkedAt: { type: Date, default: null },
 
     active: { type: Boolean, default: true },
+    suspended: { type: Boolean, default: false }, // suspensión temporal (distinta de desactivar/eliminar)
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Employee", default: null },
+
+    // Tareas diarias asignadas por el director, visibles solo para este empleado.
+    tasks: { type: [taskSchema], default: [] },
   },
   { timestamps: true }
 );
