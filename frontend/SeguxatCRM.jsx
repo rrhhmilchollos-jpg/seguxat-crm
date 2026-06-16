@@ -47,6 +47,72 @@ const KITS = {
   negocio: { name: "Negocio", alta: 599, cuota: 49.9, desc: "Central + sensores perimetrales + cámaras HD + botón pánico + respuesta prioritaria" },
 };
 
+// Catálogo extendido para la sección "Catálogo y presupuestos": detalle de
+// equipamiento por kit, gama Sentinel (relojes GPS/SOS) y complementos.
+const KIT_FEATURES = {
+  esencial: [
+    "Central de alarma con batería de respaldo 24h",
+    "2 sensores de apertura puerta/ventana",
+    "1 detector de movimiento por infrarrojos",
+    "Sirena interior 90dB",
+    "App móvil de control y notificaciones",
+    "Conexión a Central Receptora de Alarmas 24/7",
+  ],
+  total: [
+    "Central de alarma con batería de respaldo 24h",
+    "4 sensores de apertura puerta/ventana",
+    "2 cámaras HD interior/exterior con videoverificación",
+    "Sirena exterior autoalimentada con flash",
+    "Detector de humo conectado",
+    "App móvil con histórico de eventos y clips de vídeo",
+    "Conexión a Central Receptora de Alarmas 24/7 con verificación por vídeo",
+  ],
+  negocio: [
+    "Central de alarma profesional multi-zona",
+    "Sensores perimetrales para accesos y escaparates",
+    "Cámaras HD con grabación en la nube",
+    "Botón de pánico para personal",
+    "Respuesta prioritaria de la Central ante alertas",
+    "Gestión de horarios de apertura/cierre del negocio",
+    "Informes mensuales de actividad para el titular",
+  ],
+};
+
+const SENTINEL_MODELS = [
+  {
+    id: "sentinel-classic",
+    name: "Sentinel Classic",
+    price: 89,
+    cuota: 9.9,
+    desc: "El reloj GPS y botón SOS original de Seguxat. Pensado para mayores y para quienes pasan muchas horas solos.",
+    features: ["GPS + red móvil 4G", "Botón SOS de doble pulsación", "Altavoz y micrófono para llamada bidireccional", "Autonomía hasta 5 días", "Resistencia IP67 (agua y polvo)"],
+  },
+  {
+    id: "sentinel-active",
+    name: "Sentinel Active",
+    price: 119,
+    cuota: 12.9,
+    desc: "Pensado para deportistas, senderistas y profesionales que se desplazan a diario. Añade detección de caídas.",
+    features: ["Todo lo de Sentinel Classic", "Detección automática de caídas", "Resistencia a golpes reforzada", "Modo 'ruta segura' con seguimiento en tiempo real"],
+  },
+  {
+    id: "sentinel-kids",
+    name: "Sentinel Kids",
+    price: 79,
+    cuota: 8.9,
+    desc: "Localización y botón SOS pensado para niños, con zonas seguras configurables por los padres desde la app.",
+    features: ["GPS de alta precisión", "Botón SOS único, sencillo de usar", "Zonas seguras con aviso de entrada/salida", "Sin acceso a internet ni redes sociales"],
+  },
+];
+
+const ADDONS = [
+  { name: "Cámara HD adicional", price: 79, cuota: 4.9 },
+  { name: "Sensor de apertura adicional", price: 29, cuota: 0 },
+  { name: "Detector de humo adicional", price: 45, cuota: 0 },
+  { name: "Mando a distancia armado/desarmado", price: 25, cuota: 0 },
+  { name: "Llavero de proximidad", price: 19, cuota: 0 },
+];
+
 const INITIAL_LEADS = [
   { id: 1, name: "Carmen Ibáñez", zone: "El Carmen", phone: "612 345 001", kit: "esencial", source: "Puerta a puerta", rep: "r1", stage: "nuevo", days: 1 },
   { id: 2, name: "Roberto Sanz", zone: "Camins al Grau", phone: "612 345 002", kit: "total", source: "Web", rep: "r3", stage: "nuevo", days: 2 },
@@ -135,6 +201,10 @@ const NAV = [
   { id: "agenda", label: "Agenda", icon: CalendarDays },
   { id: "clientes", label: "Clientes", icon: Users },
   { id: "catalogo", label: "Catálogo", icon: Package },
+];
+
+// Solo visible para el director: ranking comparativo de todo el equipo.
+const DIRECTOR_ONLY_NAV = [
   { id: "comerciales", label: "Comerciales", icon: Trophy },
 ];
 
@@ -564,34 +634,109 @@ function ClientesView() {
 }
 
 function CatalogoView() {
+  const [tab, setTab] = useState("kits");
   const [kit, setKit] = useState("total");
+  const [sentinel, setSentinel] = useState(null);
   const [clientName, setClientName] = useState("");
   const [generated, setGenerated] = useState(false);
-  const selected = KITS[kit];
+  const selectedKit = KITS[kit];
+
+  const TABS = [
+    { id: "kits", label: "Kits de alarma" },
+    { id: "sentinel", label: "Gama Sentinel" },
+    { id: "addons", label: "Complementos" },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {Object.entries(KITS).map(([k, v]) => (
-          <div key={k} className={`rounded-xl border p-5 ${kit === k ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white`}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-serif text-lg font-bold text-slate-900">{v.name}</h3>
-              {kit === k && <CheckCircle2 className="w-5 h-5 text-amber-500" />}
-            </div>
-            <p className="text-sm text-slate-500 mb-4">{v.desc}</p>
-            <div className="text-2xl font-serif font-bold text-slate-900 tabular-nums">{v.alta} €</div>
-            <div className="text-xs text-slate-400 mb-4">instalación · luego {v.cuota.toFixed(2).replace(".", ",")} €/mes</div>
-            <button onClick={() => { setKit(k); setGenerated(false); }}
-              className={`w-full rounded-lg py-2 text-sm font-medium ${kit === k ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
-              {kit === k ? "Seleccionado" : "Seleccionar"}
-            </button>
-          </div>
+      <div className="flex gap-1 border-b border-slate-200">
+        {TABS.map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition ${
+              tab === t.id ? "border-amber-500 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}>
+            {t.label}
+          </button>
         ))}
       </div>
 
+      {tab === "kits" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Object.entries(KITS).map(([k, v]) => (
+            <div key={k} className={`rounded-xl border p-5 ${kit === k ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white flex flex-col`}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-serif text-lg font-bold text-slate-900">{v.name}</h3>
+                {kit === k && <CheckCircle2 className="w-5 h-5 text-amber-500" />}
+              </div>
+              <p className="text-sm text-slate-500 mb-4">{v.desc}</p>
+              <ul className="space-y-1.5 mb-4 flex-1">
+                {KIT_FEATURES[k].map((f, i) => (
+                  <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0 mt-0.5" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="text-2xl font-serif font-bold text-slate-900 tabular-nums">{v.alta} €</div>
+              <div className="text-xs text-slate-400 mb-4">instalación · luego {v.cuota.toFixed(2).replace(".", ",")} €/mes</div>
+              <button onClick={() => { setKit(k); setGenerated(false); }}
+                className={`w-full rounded-lg py-2 text-sm font-medium ${kit === k ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+                {kit === k ? "Seleccionado" : "Seleccionar"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "sentinel" && (
+        <div>
+          <p className="text-sm text-slate-500 mb-4">
+            La gama Sentinel son los relojes GPS con botón SOS exclusivos de Seguxat — un producto independiente de los kits de alarma, pensado para venderse solo o como complemento.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {SENTINEL_MODELS.map((s) => (
+              <div key={s.id} className={`rounded-xl border p-5 ${sentinel === s.id ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white flex flex-col`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-serif text-lg font-bold text-slate-900">{s.name}</h3>
+                  {sentinel === s.id && <CheckCircle2 className="w-5 h-5 text-amber-500" />}
+                </div>
+                <p className="text-sm text-slate-500 mb-4">{s.desc}</p>
+                <ul className="space-y-1.5 mb-4 flex-1">
+                  {s.features.map((f, i) => (
+                    <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0 mt-0.5" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="text-2xl font-serif font-bold text-slate-900 tabular-nums">{s.price} €</div>
+                <div className="text-xs text-slate-400 mb-4">dispositivo · luego {s.cuota.toFixed(2).replace(".", ",")} €/mes</div>
+                <button onClick={() => { setSentinel(s.id); setGenerated(false); }}
+                  className={`w-full rounded-lg py-2 text-sm font-medium ${sentinel === s.id ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+                  {sentinel === s.id ? "Seleccionado" : "Seleccionar"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "addons" && (
+        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+          {ADDONS.map((a, i) => (
+            <div key={i} className="flex items-center justify-between px-5 py-3.5">
+              <span className="text-sm text-slate-700">{a.name}</span>
+              <span className="text-sm font-medium text-slate-900 tabular-nums">
+                {a.price} € {a.cuota > 0 && <span className="text-slate-400">+ {a.cuota.toFixed(2).replace(".", ",")} €/mes</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-slate-200 p-5">
         <h3 className="font-serif text-base font-bold text-slate-900 mb-1">Generador de presupuesto</h3>
-        <p className="text-sm text-slate-500 mb-4">Genera un resumen rápido para enviar o entregar en mano al cliente.</p>
+        <p className="text-sm text-slate-500 mb-4">Genera un resumen rápido para enviar o entregar en mano al cliente. Usa el kit seleccionado en la pestaña "Kits de alarma".</p>
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <input value={clientName} onChange={(e) => { setClientName(e.target.value); setGenerated(false); }}
             placeholder="Nombre del cliente"
@@ -605,10 +750,10 @@ function CatalogoView() {
           <div className="border border-dashed border-amber-300 rounded-lg p-4 bg-amber-50/40">
             <div className="text-xs uppercase tracking-wide text-amber-600 font-semibold mb-2">Presupuesto Seguxat</div>
             <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Cliente</span><span className="font-medium text-slate-900">{clientName}</span></div>
-            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Plan</span><span className="font-medium text-slate-900">{selected.name}</span></div>
-            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Instalación (pago único)</span><span className="font-medium text-slate-900 tabular-nums">{selected.alta.toFixed(2).replace(".", ",")} €</span></div>
-            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Cuota mensual monitorización</span><span className="font-medium text-slate-900 tabular-nums">{selected.cuota.toFixed(2).replace(".", ",")} €/mes</span></div>
-            <div className="flex justify-between text-sm pt-2 mt-2 border-t border-amber-200"><span className="font-semibold text-slate-900">Total primer mes</span><span className="font-bold text-slate-900 tabular-nums">{(selected.alta + selected.cuota).toFixed(2).replace(".", ",")} €</span></div>
+            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Plan</span><span className="font-medium text-slate-900">{selectedKit.name}</span></div>
+            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Instalación (pago único)</span><span className="font-medium text-slate-900 tabular-nums">{selectedKit.alta.toFixed(2).replace(".", ",")} €</span></div>
+            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Cuota mensual monitorización</span><span className="font-medium text-slate-900 tabular-nums">{selectedKit.cuota.toFixed(2).replace(".", ",")} €/mes</span></div>
+            <div className="flex justify-between text-sm pt-2 mt-2 border-t border-amber-200"><span className="font-semibold text-slate-900">Total primer mes</span><span className="font-bold text-slate-900 tabular-nums">{(selectedKit.alta + selectedKit.cuota).toFixed(2).replace(".", ",")} €</span></div>
           </div>
         )}
       </div>
@@ -852,11 +997,22 @@ function LoginView({ onLogin }) {
 // ============================================================
 // EMPLEADOS — solo director
 // ============================================================
+const ROLE_LABELS = {
+  director: "Director",
+  comercial: "Comercial",
+  televenta: "Televenta",
+  tecnico: "Técnico instalador",
+  soporte: "Soporte / CRA",
+};
+
 function EmpleadosView({ token, currentUser }) {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [tasksTarget, setTasksTarget] = useState(null);
 
   async function load() {
     if (!token) { setLoading(false); setError("offline"); return; }
@@ -886,10 +1042,30 @@ function EmpleadosView({ token, currentUser }) {
     load();
   }
 
+  async function toggleSuspend(emp) {
+    if (!token) return;
+    await fetch(`${API_BASE}/employees/${emp._id}/suspend`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ suspended: !emp.suspended }),
+    });
+    load();
+  }
+
+  async function deleteEmployee(emp) {
+    if (!token) return;
+    await fetch(`${API_BASE}/employees/${emp._id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setConfirmDelete(null);
+    load();
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">Solo el director puede crear, desactivar o cambiar el rol de empleados.</p>
+        <p className="text-sm text-slate-500">Solo el director puede crear, suspender, eliminar o cambiar el rol de empleados.</p>
         <button onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-lg px-3 py-2">
           <Plus className="w-4 h-4" /> Nuevo empleado
@@ -920,37 +1096,230 @@ function EmpleadosView({ token, currentUser }) {
               </tr>
             </thead>
             <tbody>
-              {employees.map((emp) => (
-                <tr key={emp._id} className="border-t border-slate-100">
-                  <td className="px-4 py-3 font-medium text-slate-900">{emp.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{emp.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${emp.role === "director" ? "bg-slate-900 text-white border-slate-900" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                      {emp.role === "director" ? "Director" : "Comercial"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{emp.zone || "—"}</td>
-                  <td className="px-4 py-3">
-                    {emp.googleId ? <CheckCircle2 className="w-4 h-4 text-teal-600" /> : <span className="text-xs text-slate-400">Pendiente</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={emp.active ? "Activo" : "Inactivo"} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {emp._id !== currentUser._id && (
-                      <button onClick={() => toggleActive(emp)} className="text-xs text-slate-400 hover:text-red-600">
-                        {emp.active ? "Desactivar" : "Activar"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {employees.map((emp) => {
+                const isSelf = emp._id === currentUser._id;
+                const status = !emp.active ? "Inactivo" : emp.suspended ? "Suspendido" : "Activo";
+                return (
+                  <tr key={emp._id} className="border-t border-slate-100">
+                    <td className="px-4 py-3 font-medium text-slate-900">{emp.name}</td>
+                    <td className="px-4 py-3 text-slate-500">{emp.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${emp.role === "director" ? "bg-slate-900 text-white border-slate-900" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                        {ROLE_LABELS[emp.role] || emp.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">{emp.zone || "—"}</td>
+                    <td className="px-4 py-3">
+                      {emp.googleId ? <CheckCircle2 className="w-4 h-4 text-teal-600" /> : <span className="text-xs text-slate-400">Pendiente</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border ${
+                        status === "Activo" ? "bg-teal-50 text-teal-700 border-teal-200"
+                        : status === "Suspendido" ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : "bg-slate-50 text-slate-500 border-slate-200"
+                      }`}>{status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {!isSelf && (
+                        <div className="flex items-center justify-end gap-3">
+                          <button onClick={() => setTasksTarget(emp)} className="text-xs text-slate-400 hover:text-amber-600">
+                            Tareas
+                          </button>
+                          <button onClick={() => setResetTarget(emp)} className="text-xs text-slate-400 hover:text-amber-600">
+                            Reenviar credenciales
+                          </button>
+                          <button onClick={() => toggleSuspend(emp)} className="text-xs text-slate-400 hover:text-amber-600">
+                            {emp.suspended ? "Reactivar" : "Suspender"}
+                          </button>
+                          <button onClick={() => toggleActive(emp)} className="text-xs text-slate-400 hover:text-slate-700">
+                            {emp.active ? "Desactivar" : "Activar"}
+                          </button>
+                          <button onClick={() => setConfirmDelete(emp)} className="text-xs text-slate-400 hover:text-red-600">
+                            Eliminar
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       ) : null}
 
       {showModal && <NewEmployeeModal token={token} onClose={() => setShowModal(false)} onCreated={load} />}
+      {resetTarget && <ResetPasswordModal token={token} employee={resetTarget} onClose={() => setResetTarget(null)} onDone={load} />}
+      {tasksTarget && <TasksModal token={token} employee={tasksTarget} onClose={() => setTasksTarget(null)} />}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-30 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="font-serif text-lg font-bold text-slate-900 mb-2">Eliminar empleado</h3>
+            <p className="text-sm text-slate-600 mb-5">
+              Esto eliminará permanentemente la cuenta de <strong>{confirmDelete.name}</strong>. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-slate-300 rounded-lg py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button onClick={() => deleteEmployee(confirmDelete)} className="flex-1 bg-red-600 hover:bg-red-700 rounded-lg py-2 text-sm font-medium text-white">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResetPasswordModal({ token, employee, onClose, onDone }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(null);
+
+  async function submit() {
+    setError(null);
+    if (!password || password.length < 8) { setError("La contraseña debe tener al menos 8 caracteres"); return; }
+    if (!token) { setError("Sin conexión con el backend"); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/employees/${employee._id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "No se pudo restablecer la contraseña"); return; }
+      setDone(data.emailSent);
+      setTimeout(() => { onDone(); onClose(); }, 1500);
+    } catch {
+      setError("No se pudo conectar con el backend");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-30 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-serif text-lg font-bold text-slate-900">Reenviar credenciales</h3>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+        </div>
+        <p className="text-sm text-slate-500 mb-3">
+          Define una nueva contraseña provisional para <strong>{employee.name}</strong>. Se le enviará por correo a {employee.email}.
+        </p>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          placeholder="Nueva contraseña (mín. 8 caracteres)"
+          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+        {error && <p className="text-xs text-red-600 flex items-center gap-1 mt-2"><AlertCircle className="w-3.5 h-3.5" />{error}</p>}
+        {done !== null && (
+          <p className="text-xs text-teal-600 flex items-center gap-1 mt-2">
+            <CheckCircle2 className="w-3.5 h-3.5" /> {done ? "Correo enviado correctamente." : "Contraseña actualizada (el correo no se pudo enviar, comunícasela en mano)."}
+          </p>
+        )}
+        <div className="flex gap-2 mt-4">
+          <button onClick={onClose} className="flex-1 border border-slate-300 rounded-lg py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+          <button onClick={submit} disabled={loading}
+            className="flex-1 bg-amber-500 hover:bg-amber-600 rounded-lg py-2 text-sm font-medium text-white flex items-center justify-center gap-2 disabled:opacity-60">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TasksModal({ token, employee, onClose }) {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/employees/${employee._id}/tasks`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setTasks(data.tasks || []);
+    } catch {
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [employee._id]);
+
+  async function addTask() {
+    if (!title.trim()) return;
+    setAdding(true);
+    try {
+      await fetch(`${API_BASE}/employees/${employee._id}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title, description }),
+      });
+      setTitle("");
+      setDescription("");
+      load();
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function removeTask(taskId) {
+    await fetch(`${API_BASE}/employees/${employee._id}/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    load();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-30 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-serif text-lg font-bold text-slate-900">Tareas de {employee.name}</h3>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">Estas tareas aparecen en su dashboard personal, visible solo para {employee.name}.</p>
+
+        <div className="space-y-2 mb-4 border border-slate-200 rounded-lg p-3">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título de la tarea"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción (opcional)"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <button onClick={addTask} disabled={adding || !title.trim()}
+            className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg py-2 flex items-center justify-center gap-2">
+            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Añadir tarea
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-2">
+          {loading ? (
+            <div className="text-sm text-slate-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Cargando...</div>
+          ) : tasks.length === 0 ? (
+            <div className="text-sm text-slate-400 italic">Sin tareas asignadas todavía.</div>
+          ) : tasks.map((t) => (
+            <div key={t._id} className="flex items-start justify-between gap-3 border border-slate-100 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                {t.done ? <CheckCircle2 className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" /> : <div className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0" />}
+                <div>
+                  <div className={`text-sm font-medium ${t.done ? "text-slate-400 line-through" : "text-slate-900"}`}>{t.title}</div>
+                  {t.description && <div className="text-xs text-slate-500 mt-0.5">{t.description}</div>}
+                </div>
+              </div>
+              <button onClick={() => removeTask(t._id)} className="text-xs text-slate-400 hover:text-red-600 shrink-0">Eliminar</button>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onClose} className="mt-4 border border-slate-300 rounded-lg py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+          Cerrar
+        </button>
+      </div>
     </div>
   );
 }
@@ -1013,6 +1382,9 @@ function NewEmployeeModal({ token, onClose, onCreated }) {
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="w-full mt-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                 <option value="comercial">Comercial</option>
+                <option value="televenta">Televenta</option>
+                <option value="tecnico">Técnico instalador</option>
+                <option value="soporte">Soporte / CRA</option>
                 <option value="director">Director</option>
               </select>
             </div>
@@ -1038,6 +1410,105 @@ function NewEmployeeModal({ token, onClose, onCreated }) {
 }
 
 // ============================================================
+// DASHBOARD PERSONAL DE EMPLEADO (no-director)
+// ============================================================
+function EmployeeDashboardView({ token, currentUser }) {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    if (!token) { setLoading(false); setError("offline"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/employees/me/tasks`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setTasks(data.tasks || []);
+      setError(null);
+    } catch {
+      setError("offline");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [token]);
+
+  async function toggleTask(task) {
+    if (!token) return;
+    setTasks((prev) => prev.map((t) => (t._id === task._id ? { ...t, done: !t.done } : t)));
+    await fetch(`${API_BASE}/employees/me/tasks/${task._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ done: !task.done }),
+    });
+  }
+
+  const pending = tasks.filter((t) => !t.done);
+  const done = tasks.filter((t) => t.done);
+  const roleLabel = ROLE_LABELS[currentUser.role] || currentUser.role;
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <h3 className="font-serif text-lg font-bold text-slate-900">Hola, {currentUser.name.split(" ")[0]}</h3>
+        <p className="text-sm text-slate-500 mt-1">
+          {roleLabel} · {currentUser.zone || "Seguxat"}. Aquí tienes tus tareas asignadas para hoy.
+        </p>
+      </div>
+
+      {error === "offline" && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg p-3 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          No se pudo conectar con el backend para cargar tus tareas.
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-sm text-slate-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Cargando tareas...</div>
+      ) : tasks.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-sm text-slate-400">
+          Todavía no tienes tareas asignadas. Tu director te las irá añadiendo aquí.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <h4 className="text-sm font-semibold text-slate-700 mb-3">Pendientes ({pending.length})</h4>
+            <div className="space-y-2">
+              {pending.map((t) => (
+                <button key={t._id} onClick={() => toggleTask(t)}
+                  className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-amber-300">
+                  <div className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">{t.title}</div>
+                    {t.description && <div className="text-xs text-slate-500 mt-0.5">{t.description}</div>}
+                  </div>
+                </button>
+              ))}
+              {pending.length === 0 && <div className="text-xs text-slate-400 italic">¡Todo hecho! 🎉</div>}
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <h4 className="text-sm font-semibold text-slate-700 mb-3">Completadas ({done.length})</h4>
+            <div className="space-y-2">
+              {done.map((t) => (
+                <button key={t._id} onClick={() => toggleTask(t)}
+                  className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-slate-300 opacity-60">
+                  <CheckCircle2 className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-slate-500 line-through">{t.title}</div>
+                </button>
+              ))}
+              {done.length === 0 && <div className="text-xs text-slate-400 italic">Aún ninguna completada hoy.</div>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // APP SHELL
 // ============================================================
 export default function SeguxatCRM() {
@@ -1050,10 +1521,10 @@ export default function SeguxatCRM() {
   }
 
   const isDirector = currentUser.role === "director";
-  const nav = isDirector ? [...NAV, { id: "empleados", label: "Empleados", icon: UserCog }] : NAV;
+  const nav = isDirector ? [...NAV, ...DIRECTOR_ONLY_NAV, { id: "empleados", label: "Empleados", icon: UserCog }] : NAV;
 
   const views = {
-    dashboard: <DashboardView />,
+    dashboard: isDirector ? <DashboardView /> : <EmployeeDashboardView token={token} currentUser={currentUser} />,
     pipeline: <PipelineView />,
     agenda: <AgendaView />,
     clientes: <ClientesView />,
@@ -1099,7 +1570,7 @@ export default function SeguxatCRM() {
           </div>
           <div className="min-w-0">
             <div className="text-sm font-medium truncate">{currentUser.name}</div>
-            <div className="text-xs text-slate-400 truncate">{isDirector ? "Director" : "Comercial"} · {currentUser.zone || "Seguxat"}</div>
+            <div className="text-xs text-slate-400 truncate">{ROLE_LABELS[currentUser.role] || currentUser.role} · {currentUser.zone || "Seguxat"}</div>
           </div>
           <button onClick={logout} title="Cerrar sesión" className="ml-auto text-slate-400 hover:text-white">
             <LogOut className="w-4 h-4" />
