@@ -845,7 +845,12 @@ function GoogleButton({ onCredential, label }) {
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: (resp) => onCredential(resp.credential),
+      auto_select: false, // nunca reutilizar automáticamente la última cuenta de Google usada en este navegador
     });
+    // Por si una sesión anterior (de otro empleado) quedó "recordada" por Google
+    // en este mismo navegador, la descartamos explícitamente antes de mostrar
+    // el botón, para forzar siempre la pantalla de selección de cuenta.
+    window.google.accounts.id.disableAutoSelect();
     const el = document.getElementById(containerId);
     if (el) window.google.accounts.id.renderButton(el, { theme: "outline", size: "large", width: 280 });
   }, [ready]);
