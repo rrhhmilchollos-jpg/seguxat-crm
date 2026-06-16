@@ -2,6 +2,7 @@ import express from "express";
 import Employee, { ROLES } from "../models/Employee.js";
 import { requireAuth } from "../middleware/auth.js";
 import { onlyDirector } from "../middleware/requireRole.js";
+import { sendWelcomeEmail } from "../utils/email.js";
 
 const router = express.Router();
 
@@ -51,7 +52,14 @@ router.post("/", onlyDirector, async (req, res) => {
     createdBy: req.employee._id,
   });
 
-  res.status(201).json({ employee });
+  const emailResult = await sendWelcomeEmail({
+    to: employee.email,
+    name: employee.name,
+    email: employee.email,
+    password,
+  });
+
+  res.status(201).json({ employee, emailSent: emailResult.sent });
 });
 
 // Activar / desactivar un empleado
@@ -96,7 +104,15 @@ router.post("/:id/reset-password", onlyDirector, async (req, res) => {
 
   employee.passwordHash = await Employee.hashPassword(password);
   await employee.save();
-  res.json({ ok: true });
+
+  const emailResult = await sendWelcomeEmail({
+    to: employee.email,
+    name: employee.name,
+    email: employee.email,
+    password,
+  });
+
+  res.json({ ok: true, emailSent: emailResult.sent });
 });
 
 export default router;
