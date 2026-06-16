@@ -1062,6 +1062,16 @@ function EmpleadosView({ token, currentUser }) {
     load();
   }
 
+  async function changeRole(emp, newRole) {
+    if (!token || newRole === emp.role) return;
+    await fetch(`${API_BASE}/employees/${emp._id}/role`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ role: newRole }),
+    });
+    load();
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -1104,9 +1114,18 @@ function EmpleadosView({ token, currentUser }) {
                     <td className="px-4 py-3 font-medium text-slate-900">{emp.name}</td>
                     <td className="px-4 py-3 text-slate-500">{emp.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${emp.role === "director" ? "bg-slate-900 text-white border-slate-900" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                        {ROLE_LABELS[emp.role] || emp.role}
-                      </span>
+                      {isSelf ? (
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${emp.role === "director" ? "bg-slate-900 text-white border-slate-900" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                          {ROLE_LABELS[emp.role] || emp.role}
+                        </span>
+                      ) : (
+                        <select value={emp.role} onChange={(e) => changeRole(emp, e.target.value)}
+                          className="text-xs font-medium px-2 py-1 rounded-full border bg-slate-50 text-slate-600 border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                          {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-slate-500">{emp.zone || "—"}</td>
                     <td className="px-4 py-3">
