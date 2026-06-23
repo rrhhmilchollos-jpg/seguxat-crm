@@ -218,7 +218,7 @@ const AGENDA = [
 
 const NAV = [
   { id: "dashboard", label: "Resumen", icon: LayoutDashboard },
-  { id: "pipeline", label: "Pipeline", icon: Workflow },
+  { id: "pipeline", label: "Citas", icon: Workflow },
   { id: "agenda", label: "Agenda", icon: CalendarDays },
   { id: "clientes", label: "Clientes", icon: Users },
   { id: "catalogo", label: "Catálogo", icon: Package },
@@ -231,7 +231,7 @@ const DIRECTOR_ONLY_NAV = [
 
 const PAGE_TITLES = {
   dashboard: "Resumen general",
-  pipeline: "Pipeline de ventas",
+  pipeline: "Gestión de citas",
   agenda: "Agenda de visitas",
   clientes: "Clientes",
   catalogo: "Catálogo y presupuestos",
