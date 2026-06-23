@@ -8,7 +8,7 @@ router.use(requireAuth);
 // GET — listar todas (director ve todo, coordinadora ve las suyas)
 router.get("/", async (req, res) => {
   try {
-    const filter = req.employee.role === "director" ? {} : { coordinatorEmail: req.employee.email };
+    const filter = (req.employee.role === "director" || req.employee.role === "televenta") ? {} : { coordinatorEmail: req.employee.email };
     const instalaciones = await Instalacion.find(filter).sort({ date: 1, time: 1 });
     res.json({ instalaciones });
   } catch (e) {

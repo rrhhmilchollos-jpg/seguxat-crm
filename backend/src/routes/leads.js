@@ -6,9 +6,10 @@ import { ROLES } from "../models/Employee.js";
 const router = express.Router();
 router.use(requireAuth);
 
-// Director ve todo el pipeline; un comercial solo ve lo suyo.
+// Director y televenta (coordinadoras Karla, María) ven todo el pipeline.
+// Comercial y técnico solo ven sus leads asignados.
 function scopeFilter(employee) {
-  if (employee.role === ROLES.DIRECTOR) return {};
+  if (employee.role === ROLES.DIRECTOR || employee.role === "televenta") return {};
   return { assignedTo: employee._id };
 }
 
