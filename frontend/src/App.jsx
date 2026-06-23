@@ -284,12 +284,12 @@ function DashboardView() {
   const totalLeadsActivos = 347;
   const citasSemana = 64;
   const mrr = 58400;
-  const clientesActivos = 1.847;
+  const clientesActivos = 1847;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Leads activos en pipeline" value={totalLeadsActivos} sub="+28 esta semana" icon={Workflow} accent="bg-slate-900" />
+        <StatCard label="Leads activos en citas" value="347" sub="+28 esta semana" icon={Workflow} accent="bg-slate-900" />
         <StatCard label="Citas esta semana" value={citasSemana} sub="6 días, 18 comerciales activos" icon={CalendarDays} accent="bg-amber-500" />
         <StatCard label="Tasa de conversión" value="68%" sub="Lead → Contrato (últ. 30 días)" icon={TrendingUp} accent="bg-teal-600" />
         <StatCard label="Facturación mensual" value="58.400 €" sub="1.847 clientes en monitorización" icon={ShieldCheck} accent="bg-sky-600" />
@@ -1601,7 +1601,7 @@ function ComercialesView({ token, leads }) {
   const COLORES = ["bg-amber-500","bg-teal-600","bg-sky-600","bg-violet-600","bg-rose-500","bg-emerald-600","bg-orange-500","bg-indigo-600","bg-pink-500","bg-cyan-600"];
 
   const visibles = empleados
-    .filter(e => ["comercial","tecnico","televenta"].includes(e.role))
+    .filter(e => ["comercial","tecnico","televenta"].includes(e.role) && e.role !== "director")
     .filter(e => filtro === "todos" || e.role === filtro)
     .filter(e => !busca || e.name.toLowerCase().includes(busca.toLowerCase()) || (e.zone||"").toLowerCase().includes(busca.toLowerCase()))
     .sort((a,b) => a.name.localeCompare(b.name));
@@ -1907,7 +1907,8 @@ function EmpleadosView({ token, currentUser }) {
       const res = await fetch(`${API_BASE}/employees`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setEmployees(data.employees);
+      // Ocultar director de la lista visible para el resto de empleados
+      setEmployees(data.employees.filter(e => e.role !== "director"));
       setError(null);
     } catch {
       setError("offline");
