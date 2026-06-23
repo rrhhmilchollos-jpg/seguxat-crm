@@ -1706,93 +1706,104 @@ function PagosView() {
   function copyToClipboard(text, field) {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(field);
-      setTimeout(() => setCopied(null), 2000);
+      setTimeout(() => setCopied(null), 2500);
     });
   }
 
-  const CUENTA = {
-    titular: "Manoprotectt",
-    iban: "BE18 9030 0915 8465",
-    ibanRaw: "BE18903009158465",
-    swift: "TRWIBEB1XXX",
-    banco: "Wise Europe SA",
-    direccion: "Rue du Trône 100, 3rd floor, Brussels, 1050, Belgium",
-    moneda: "EUR (área SEPA y +100 países)",
-  };
-
-  const campos = [
-    { key: "titular", label: "Titular de la cuenta", value: CUENTA.titular, copy: CUENTA.titular },
-    { key: "iban", label: "IBAN", value: CUENTA.iban, copy: CUENTA.ibanRaw, badge: "SEPA · +100 países" },
-    { key: "swift", label: "SWIFT / BIC", value: CUENTA.swift, copy: CUENTA.swift, note: "Solo para transferencias internacionales Swift" },
-    { key: "banco", label: "Entidad bancaria", value: CUENTA.banco, copy: CUENTA.banco },
-    { key: "direccion", label: "Dirección del banco", value: CUENTA.direccion, copy: CUENTA.direccion },
-  ];
-
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="max-w-3xl space-y-5">
 
-      {/* Aviso interno */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <div className="text-sm font-semibold text-amber-800">Uso interno exclusivo</div>
-          <div className="text-xs text-amber-700 mt-0.5">Esta información es confidencial. Compártela únicamente con clientes para gestionar pagos de alta o cuotas de Seguxat. No la difundas por canales no seguros.</div>
+      {/* Hero banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 flex items-center gap-5">
+        <div className="absolute inset-0 opacity-10" style={{backgroundImage:"radial-gradient(circle at 80% 50%, #10b981 0%, transparent 60%)"}} />
+        <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center shrink-0">
+          <Banknote className="w-8 h-8 text-emerald-400" />
+        </div>
+        <div className="flex-1">
+          <div className="text-white text-xl font-bold">Manoprotectt</div>
+          <div className="text-slate-400 text-sm mt-0.5">Cuenta de cobros · Seguxat S.L.</div>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />Cuenta activa</span>
+            <span className="text-slate-600 text-xs">·</span>
+            <span className="text-xs text-slate-400">Wise Europe SA · Bruselas</span>
+            <span className="text-slate-600 text-xs">·</span>
+            <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">SEPA · +100 países</span>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-2xl font-bold text-white font-mono tracking-wide">EUR</div>
+          <div className="text-slate-400 text-xs mt-0.5">Divisa principal</div>
         </div>
       </div>
 
-      {/* Tarjeta principal */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="bg-slate-900 px-6 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-            <Banknote className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="text-white font-semibold text-base">Cuenta bancaria Seguxat</div>
-            <div className="text-slate-400 text-xs">{CUENTA.moneda}</div>
-          </div>
-          <div className="ml-auto text-right">
-            <div className="text-emerald-400 text-xs font-medium">● Activa</div>
-            <div className="text-slate-500 text-xs">Wise Europe</div>
-          </div>
-        </div>
+      {/* Aviso confidencial */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+        <p className="text-xs text-amber-800"><strong>Uso interno exclusivo.</strong> Comparte estos datos únicamente con clientes para gestionar pagos. No los difundas por canales no seguros.</p>
+      </div>
 
-        <div className="divide-y divide-slate-100">
-          {campos.map((c) => (
-            <div key={c.key} className="px-6 py-4 flex items-start justify-between gap-4 hover:bg-slate-50 transition">
+      {/* Grid de datos bancarios */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { key:"titular", label:"Titular", value:"Manoprotectt", copy:"Manoprotectt", icon:"👤", big:false },
+          { key:"iban", label:"IBAN", value:"BE18 9030 0915 8465", copy:"BE18903009158465", icon:"🏦", big:true, badge:"SEPA" },
+          { key:"swift", label:"SWIFT / BIC", value:"TRWIBEB1XXX", copy:"TRWIBEB1XXX", icon:"🌐", big:false, note:"Transferencias internacionales" },
+          { key:"banco", label:"Entidad bancaria", value:"Wise Europe SA", copy:"Wise Europe SA", icon:"🏛️", big:false },
+        ].map(c => (
+          <div key={c.key} className={`bg-white border border-slate-200 rounded-2xl p-4 hover:border-slate-300 hover:shadow-sm transition group ${c.big ? "col-span-2" : ""}`}>
+            <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{c.label}</div>
-                <div className="text-slate-900 font-semibold text-sm font-mono">{c.value}</div>
-                {c.note && <div className="text-xs text-slate-400 mt-0.5">{c.note}</div>}
-                {c.badge && <span className="inline-block mt-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{c.badge}</span>}
+                <div className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-1.5">{c.icon} {c.label}</div>
+                <div className={`font-bold font-mono text-slate-900 tracking-wider ${c.big ? "text-2xl" : "text-base"}`}>{c.value}</div>
+                {c.note && <div className="text-xs text-slate-400 mt-1">{c.note}</div>}
+                {c.badge && <span className="inline-block mt-1.5 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">{c.badge}</span>}
               </div>
               <button onClick={() => copyToClipboard(c.copy, c.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${copied === c.key ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-                {copied === c.key ? <><CheckCircle2 className="w-3.5 h-3.5" /> Copiado</> : <><Copy className="w-3.5 h-3.5" /> Copiar</>}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${copied===c.key ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200 group-hover:bg-slate-200"}`}>
+                {copied===c.key ? <><CheckCircle2 className="w-3.5 h-3.5" />Copiado</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
               </button>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
-      {/* Instrucciones para el agente */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Phone className="w-4 h-4 text-slate-400" />
-          <div className="text-sm font-semibold text-slate-700">Guión para informar al cliente</div>
+      {/* Dirección del banco */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-4">
+        <div>
+          <div className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-1">📍 Dirección del banco</div>
+          <div className="text-sm font-medium text-slate-700">Wise Europe SA, Rue du Trône 100, 3rd floor, Brussels, 1050, Belgium</div>
+          <div className="text-xs text-slate-400 mt-0.5">Necesaria para algunos remitentes internacionales</div>
         </div>
-        <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600 leading-relaxed italic border-l-4 border-amber-400">
-          "Para realizar el pago del alta o de su cuota mensual, puede hacer una transferencia a nombre de <strong>Manoprotectt</strong>, al IBAN <strong>BE18 9030 0915 8465</strong>. El banco es Wise Europe. Si necesita el SWIFT para una transferencia internacional, es <strong>TRWIBEB1XXX</strong>. En el concepto de la transferencia indique su nombre completo y número de contrato."
+        <button onClick={() => copyToClipboard("Wise Europe SA, Rue du Trône 100, 3rd floor, Brussels, 1050, Belgium","dir")}
+          className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${copied==="dir" ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+          {copied==="dir" ? <><CheckCircle2 className="w-3.5 h-3.5" />Copiado</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
+        </button>
+      </div>
+
+      {/* Guión para el agente */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+            <Phone className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-slate-900">Guión para informar al cliente</div>
+            <div className="text-xs text-slate-400">Léelo o copia los datos directamente</div>
+          </div>
         </div>
-        <div className="mt-3 flex gap-2 flex-wrap">
+        <div className="bg-slate-900 rounded-xl p-4 text-sm text-slate-300 leading-relaxed mb-4">
+          <span className="text-slate-500 text-xs block mb-2">— AGENTE —</span>
+          "Para realizar el pago del alta o de su cuota mensual, puede hacer una transferencia bancaria a nombre de <span className="text-emerald-400 font-semibold">Manoprotectt</span>, con IBAN <span className="text-emerald-400 font-semibold font-mono">BE18 9030 0915 8465</span>. La entidad es Wise Europe. Si necesita el código SWIFT para transferencias internacionales, es <span className="text-emerald-400 font-semibold font-mono">TRWIBEB1XXX</span>. En el concepto de la transferencia, indique por favor su nombre completo y número de contrato."
+        </div>
+        <div className="flex gap-2 flex-wrap">
           {[
-            { label: "Copiar IBAN", value: "BE18903009158465" },
-            { label: "Copiar titular", value: "Manoprotectt" },
-            { label: "Copiar SWIFT", value: "TRWIBEB1XXX" },
-          ].map((btn) => (
-            <button key={btn.label} onClick={() => copyToClipboard(btn.value, btn.label)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${copied === btn.label ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
-              {copied === btn.label ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied === btn.label ? "¡Copiado!" : btn.label}
+            { label:"📋 Copiar IBAN", value:"BE18903009158465", key:"q1" },
+            { label:"👤 Copiar titular", value:"Manoprotectt", key:"q2" },
+            { label:"🌐 Copiar SWIFT", value:"TRWIBEB1XXX", key:"q3" },
+          ].map(btn => (
+            <button key={btn.key} onClick={() => copyToClipboard(btn.value, btn.key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition ${copied===btn.key ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400"}`}>
+              {copied===btn.key ? <><CheckCircle2 className="w-3.5 h-3.5" /> ¡Copiado!</> : btn.label}
             </button>
           ))}
         </div>
