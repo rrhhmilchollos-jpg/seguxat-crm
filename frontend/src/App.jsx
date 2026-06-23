@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, Workflow, CalendarDays, Users, Package, Trophy,
   Search, MapPin, Phone, Plus, TrendingUp, Clock, ShieldCheck,
@@ -233,6 +233,7 @@ const PAGE_TITLES = {
   clientes: "Clientes",
   catalogo: "Catálogo y presupuestos",
   pagos: "Datos de pago de la empresa",
+  agente: "ARIA — Agente IA Autónoma",
   comerciales: "Equipo comercial",
   empleados: "Empleados",
 };
@@ -1482,6 +1483,223 @@ function CatalogoView() {
 // ============================================================
 // PAGOS — Datos bancarios de la empresa (solo empleados autenticados)
 // ============================================================
+// ============================================================
+// AGENTE IA — Gerente autónomo del CRM
+// ============================================================
+function AgenteView({ leads, instalaciones, token }) {
+  const [messages, setMessages] = useState([
+    { role: "assistant", content: "Hola, soy **ARIA** — Agente de Revisión Inteligente Automatizada de Seguxat. Analizo el pipeline, detecto oportunidades, superviso instalaciones y genero informes en tiempo real. ¿En qué puedo ayudarte hoy?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [autoMode, setAutoMode] = useState(false);
+  const [autoLog, setAutoLog] = useState([]);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Auto-análisis cada 60s si modo autónomo activo
+  useEffect(() => {
+    if (!autoMode) return;
+    const tasks = [
+      "Analiza los leads sin actividad en más de 3 días y sugiere acciones.",
+      "Revisa qué instalaciones están pendientes de confirmar y priorízalas.",
+      "Detecta qué zonas tienen más leads nuevos esta semana.",
+      "Genera un resumen ejecutivo del estado actual del pipeline.",
+    ];
+    let idx = 0;
+    const interval = setInterval(() => {
+      const task = tasks[idx % tasks.length];
+      idx++;
+      const ts = new Date().toLocaleTimeString("es-ES", {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+      setAutoLog(prev => [...prev.slice(-9), { ts, task, status: "ejecutando" }]);
+      sendMessage(task, true);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [autoMode, leads]);
+
+  const stageLabels = { nuevo:"Nuevo", contactado:"Contactado", cita:"Cita agendada", visita:"Visita realizada", propuesta:"Propuesta enviada", contrato:"Contrato firmado", instalacion:"Instalación" };
+
+  async function sendMessage(text, auto = false) {
+    const userMsg = text || input.trim();
+    if (!userMsg) return;
+    if (!auto) setInput("");
+    if (!auto) setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setLoading(true);
+
+    // Build CRM context for the agent
+    const stageCount = leads.reduce((acc, l) => { acc[l.stage] = (acc[l.stage]||0)+1; return acc; }, {});
+    const byZone = leads.reduce((acc, l) => { acc[l.zone] = (acc[l.zone]||0)+1; return acc; }, {});
+    const topZones = Object.entries(byZone).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([z,c])=>`${z}:${c}`).join(", ");
+    const pending = instalaciones.filter(i=>i.status==="pendiente").length;
+    const confirmed = instalaciones.filter(i=>i.status==="confirmada").length;
+
+    const systemPrompt = `Eres ARIA, agente IA autónoma de gestión del CRM de Seguxat S.L., empresa de alarmas y seguridad en Valencia. 
+Actúas como gerente ejecutiva: analítica, directa, proactiva y orientada a resultados.
+
+DATOS ACTUALES DEL CRM (tiempo real):
+- Total leads en pipeline: ${leads.length}
+- Distribución por fase: ${Object.entries(stageCount).map(([k,v])=>`${stageLabels[k]||k}: ${v}`).join(" | ")}
+- Zonas con más leads: ${topZones}
+- Instalaciones confirmadas: ${confirmed} | Pendientes: ${pending}
+- Facturación mensual: 111.500 € | Clientes activos: 4.230
+- Tasa de conversión: 74% | Leads nuevos esta semana: +94
+
+Responde siempre en español. Sé concisa pero completa. Usa bullet points y datos concretos.
+Cuando detectes problemas, propón acciones específicas con nombres de zonas o fases del pipeline.
+Formato: usa **negrita** para destacar datos clave y emojis de forma profesional.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [...messages.filter(m=>m.role!=="assistant"||messages.indexOf(m)>0).slice(-6),
+            { role: "user", content: userMsg }]
+        })
+      });
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || "No se pudo obtener respuesta.";
+      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      if (auto) setAutoLog(prev => prev.map((l,i) => i===prev.length-1 ? {...l, status:"completado"} : l));
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error de conexión con el agente. Comprueba tu red." }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const QUICK_ACTIONS = [
+    { label: "📊 Resumen ejecutivo", msg: "Dame un resumen ejecutivo completo del estado actual del CRM incluyendo alertas prioritarias." },
+    { label: "🚨 Leads en riesgo", msg: "¿Qué leads llevan más tiempo sin avanzar? Identifica los 5 más críticos por zona y sugiere acciones." },
+    { label: "📅 Agenda hoy", msg: "¿Qué instalaciones y citas hay hoy? Prioriza y organiza el día." },
+    { label: "💰 Análisis ingresos", msg: "Analiza el rendimiento de ingresos actual vs objetivo mensual y proyecta el cierre de mes." },
+    { label: "🗺️ Zonas calientes", msg: "¿Qué zonas de Valencia tienen más oportunidades de venta ahora mismo?" },
+    { label: "⚡ Acción urgente", msg: "¿Qué es lo más urgente que debe hacer el equipo ahora mismo para maximizar cierres esta semana?" },
+  ];
+
+  function renderMsg(txt) {
+    return txt
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .split(String.fromCharCode(10)).join('<br/>');
+  }
+
+  return (
+    <div className="flex gap-4 h-[calc(100vh-10rem)]">
+      {/* Panel principal del chat */}
+      <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        {/* Header del agente */}
+        <div className="bg-gradient-to-r from-slate-900 to-violet-900 px-5 py-3 flex items-center gap-3">
+          <div className="w-10 h-10 bg-violet-500 rounded-full flex items-center justify-center text-white font-bold text-sm">AI</div>
+          <div>
+            <div className="text-white font-semibold text-sm">ARIA — Agente IA Seguxat</div>
+            <div className="text-violet-300 text-xs flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              {autoMode ? "Modo autónomo activo · análisis cada 60s" : "En línea · {leads.length} leads monitorizados"}
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-violet-300">Modo autónomo</span>
+            <button onClick={() => setAutoMode(m => !m)}
+              className={`w-10 h-5 rounded-full transition relative ${autoMode ? "bg-emerald-500" : "bg-slate-600"}`}>
+              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${autoMode ? "left-5" : "left-0.5"}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Acciones rápidas */}
+        <div className="px-4 py-2 border-b border-slate-100 flex gap-2 overflow-x-auto">
+          {QUICK_ACTIONS.map(a => (
+            <button key={a.label} onClick={() => sendMessage(a.msg)}
+              className="shrink-0 text-xs bg-slate-50 hover:bg-violet-50 hover:text-violet-700 border border-slate-200 hover:border-violet-300 px-3 py-1.5 rounded-full transition">
+              {a.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Mensajes */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                m.role === "user"
+                  ? "bg-slate-900 text-white rounded-br-sm"
+                  : "bg-slate-50 border border-slate-200 text-slate-800 rounded-bl-sm"
+              }`}
+                dangerouslySetInnerHTML={{ __html: renderMsg(m.content) }} />
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{animationDelay:"0ms"}} />
+                  <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{animationDelay:"150ms"}} />
+                  <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{animationDelay:"300ms"}} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="px-4 py-3 border-t border-slate-100 flex gap-2">
+          <input value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            placeholder="Pregunta a ARIA sobre el pipeline, instalaciones, zonas..."
+            className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+          <button onClick={() => sendMessage()} disabled={loading || !input.trim()}
+            className="bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-1.5">
+            Enviar
+          </button>
+        </div>
+      </div>
+
+      {/* Panel lateral — log autónomo */}
+      <div className="w-72 flex flex-col gap-3">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <div className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${autoMode ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
+            Estado del agente
+          </div>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between"><span className="text-slate-500">Leads monitorizados</span><span className="font-semibold">{leads.length}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Instalaciones pendientes</span><span className="font-semibold text-amber-600">{instalaciones.filter(i=>i.status==="pendiente").length}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Confirmadas</span><span className="font-semibold text-emerald-600">{instalaciones.filter(i=>i.status==="confirmada").length}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Sync de datos</span><span className="font-semibold text-emerald-600">cada 30s</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Modo autónomo</span><span className={`font-semibold ${autoMode?"text-emerald-600":"text-slate-400"}`}>{autoMode?"Activo":"Inactivo"}</span></div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 flex-1 overflow-hidden flex flex-col">
+          <div className="text-sm font-semibold text-slate-900 mb-3">Log autónomo</div>
+          {autoLog.length === 0 ? (
+            <div className="text-xs text-slate-400 italic">Activa el modo autónomo para ver el log de análisis automáticos.</div>
+          ) : (
+            <div className="space-y-2 overflow-y-auto flex-1">
+              {[...autoLog].reverse().map((l, i) => (
+                <div key={i} className="text-xs border border-slate-100 rounded-lg p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-slate-400">{l.ts}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${l.status==="completado"?"bg-emerald-100 text-emerald-700":"bg-amber-100 text-amber-700"}`}>{l.status}</span>
+                  </div>
+                  <div className="text-slate-600">{l.task}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PagosView() {
   const [copied, setCopied] = useState(null);
 
@@ -2560,15 +2778,17 @@ export default function SeguxatCRM() {
   const [instalaciones, setInstalaciones] = useState(INITIAL_INSTALACIONES);
   const [agendaAutoLead, setAgendaAutoLead] = useState(null);
 
-  // Cargar leads desde la API al hacer login
-  useEffect(() => {
+  // Cargar y refrescar leads cada 30s automáticamente
+  const [lastSync, setLastSync] = useState(null);
+  const [newLeadsCount, setNewLeadsCount] = useState(0);
+
+  function fetchLeads(silent = false) {
     if (!token) return;
-    setLeadsLoading(true);
+    if (!silent) setLeadsLoading(true);
     fetch(`${API_BASE}/leads`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         if (data.leads) {
-          // Mapear formato API → formato frontend
           const mapped = data.leads.map(l => ({
             id: l._id,
             name: l.name,
@@ -2584,11 +2804,23 @@ export default function SeguxatCRM() {
             repName: l.assignedTo?.name || "",
             repZone: l.assignedTo?.zone || "",
           }));
-          setLeads(mapped);
+          setLeads(prev => {
+            const prevCount = prev.length;
+            const newCount = mapped.length;
+            if (silent && newCount > prevCount) setNewLeadsCount(n => n + (newCount - prevCount));
+            return mapped;
+          });
+          setLastSync(new Date());
         }
       })
-      .catch(() => setLeads(INITIAL_LEADS))
-      .finally(() => setLeadsLoading(false));
+      .catch(() => { if (!silent) setLeads(INITIAL_LEADS); })
+      .finally(() => { if (!silent) setLeadsLoading(false); });
+  }
+
+  useEffect(() => {
+    fetchLeads(false);
+    const interval = setInterval(() => fetchLeads(true), 30000);
+    return () => clearInterval(interval);
   }, [token]);
 
   // Mover stage en API y actualizar local
@@ -2639,6 +2871,7 @@ export default function SeguxatCRM() {
     clientes: <ClientesView />,
     catalogo: <CatalogoView />,
     pagos: <PagosView />,
+    agente: <AgenteView leads={leads} instalaciones={instalaciones} token={token} />,
     comerciales: <ComercialesView token={token} leads={leads} />,
     empleados: <EmpleadosView token={token} currentUser={currentUser} />,
   };
@@ -2694,9 +2927,25 @@ export default function SeguxatCRM() {
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
           <div>
             <h1 className="font-serif text-xl font-bold text-slate-900">{PAGE_TITLES[active]}</h1>
-            <p className="text-xs text-slate-400">Martes, 23 de junio de 2026 · v2.1</p>
+            <p className="text-xs text-slate-400 flex items-center gap-2">
+              Martes, 23 de junio de 2026 · v2.1
+              {lastSync && <span className="flex items-center gap-1.5 text-emerald-500 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                Sync {lastSync.toLocaleTimeString("es-ES", {hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+              </span>}
+            </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {newLeadsCount > 0 && (
+              <button onClick={() => { setActive("pipeline"); setNewLeadsCount(0); }}
+                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                <Bell className="w-3.5 h-3.5" /> +{newLeadsCount} leads nuevos
+              </button>
+            )}
+            <button onClick={() => setActive("agente")} title="Agente IA"
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition ${active === "agente" ? "bg-violet-600 text-white border-violet-600" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
+              🤖 Agente IA
+            </button>
             <button className="relative text-slate-400 hover:text-slate-600">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full" />
