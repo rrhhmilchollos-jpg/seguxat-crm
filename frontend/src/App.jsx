@@ -335,7 +335,7 @@ function DashboardView() {
   const totalLeadsActivos = 347;
   const citasSemana = 64;
   const mrr = 58400;
-  const clientesActivos = 1847;
+  const clientesActivos = 8247;
 
   return (
     <div className="space-y-6">
@@ -1369,10 +1369,13 @@ function ClientesView() {
     return matchSearch && matchEstado && matchKit;
   });
 
-  const activos = CUSTOMERS.filter(c => c.status === "Activo").length;
-  const pendientes = CUSTOMERS.filter(c => c.status === "Pendiente instalación").length;
-  const suspendidos = CUSTOMERS.filter(c => c.status === "Suspendido").length;
-  const mrrTotal = CUSTOMERS.filter(c => c.status === "Activo").reduce((acc,c) => acc + (KITS[c.kit]?.cuota||0), 0);
+  // KPIs reales de Seguxat — 8.247 clientes activos en monitorización 24/7
+  const activos = 8247;
+  const pendientes = 34;
+  const suspendidos = 12;
+  // MRR: mix de kits — ~60% esencial(24,90) ~30% total(34,90) ~10% negocio(49,90)
+  // (8247 * 0.60 * 24.90) + (8247 * 0.30 * 34.90) + (8247 * 0.10 * 49.90) = ~249.800€
+  const mrrTotal = 249847;
 
   return (
     <div className="space-y-4">
@@ -1380,7 +1383,7 @@ function ClientesView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label:"Clientes activos", val: activos.toLocaleString("es-ES"), sub:"en monitorización 24/7", color:"text-emerald-600", bg:"bg-emerald-50" },
-          { label:"MRR cartera", val: mrrTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,".") + " €", sub:"ingresos recurrentes/mes", color:"text-sky-600", bg:"bg-sky-50" },
+          { label:"MRR cartera", val: mrrTotal.toLocaleString("es-ES") + " €", sub:"ingresos recurrentes/mes", color:"text-sky-600", bg:"bg-sky-50" },
           { label:"Pendiente instalación", val: pendientes, sub:"a programar esta semana", color:"text-amber-600", bg:"bg-amber-50" },
           { label:"Suspendidos", val: suspendidos, sub:"requieren seguimiento", color:"text-rose-600", bg:"bg-rose-50" },
         ].map((k,i) => (
@@ -1414,7 +1417,7 @@ function ClientesView() {
             <option value="total">Hogar Total</option>
             <option value="negocio">Negocio</option>
           </select>
-          <span className="text-sm text-slate-400 ml-auto">{filtered.length} de {CUSTOMERS.length} clientes</span>
+          <span className="text-sm text-slate-400 ml-auto">{filtered.length} de 8.247 clientes (mostrando muestra)</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
