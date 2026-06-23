@@ -454,13 +454,17 @@ function NewLeadModal({ onClose, onAdd }) {
 
 function LeadPanel({ lead, onClose, onMove }) {
   const rep = repById(lead.rep);
-  const kit = KITS[lead.kit];
-  const stageIdx = STAGES.findIndex((s) => s.id === lead.stage);
+  const kit = KITS[lead.kit] || { name: lead.kit, alta: 0, cuota: 0 };
+  const stageIdx = Math.max(0, STAGES.findIndex((s) => s.id === lead.stage));
   const isBusiness = lead.kit === "negocio";
+  // Para leads de la API, el comercial viene como repName/repZone
+  const repName = rep?.name || lead.repName || "Sin asignar";
+  const repZone = rep?.zone || lead.repZone || "";
+  const repInitials = repName.split(" ").map(p=>p[0]).slice(0,2).join("").toUpperCase() || "?";
   return (
     <div className="fixed inset-y-0 right-0 w-80 bg-white border-l border-slate-200 shadow-xl p-5 flex flex-col z-20">
       <div className="flex items-center justify-between mb-1">
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full text-white ${STAGES[stageIdx].color}`}>{STAGES[stageIdx].label}</span>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full text-white ${STAGES[stageIdx]?.color || "bg-slate-400"}`}>{STAGES[stageIdx]?.label || lead.stage}</span>
         <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
       </div>
       <h3 className="font-serif text-xl font-bold text-slate-900 mt-2 flex items-center gap-2">
@@ -474,17 +478,17 @@ function LeadPanel({ lead, onClose, onMove }) {
         <div className="flex justify-between text-sm"><span className="text-slate-500">Producto de interés</span><span className="font-medium text-slate-900">{kit.name}</span></div>
         <div className="flex justify-between text-sm"><span className="text-slate-500">Alta + cuota</span><span className="font-medium text-slate-900 tabular-nums">{kit.alta} € + {kit.cuota.toFixed(2).replace(".", ",")} €/mes</span></div>
         <div className="flex justify-between text-sm"><span className="text-slate-500">Origen</span><span className="font-medium text-slate-900">{lead.source}</span></div>
-        <div className="flex justify-between text-sm"><span className="text-slate-500">Días en esta fase</span><span className="font-medium text-slate-900 tabular-nums">{lead.days}</span></div>
+        <div className="flex justify-between text-sm"><span className="text-slate-500">Días en esta fase</span><span className="font-medium text-slate-900 tabular-nums">{lead.days || 0}</span></div>
         {lead.cita && <div className="flex justify-between text-sm"><span className="text-slate-500">Próxima cita</span><span className="font-medium text-teal-600">{lead.cita}</span></div>}
       </div>
 
       <div className="mt-4">
         <div className="text-xs font-medium text-slate-500 mb-2">Comercial asignado</div>
         <div className="flex items-center gap-2">
-          <Avatar rep={rep} />
+          {rep ? <Avatar rep={rep} /> : <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-bold">{repInitials}</div>}
           <div>
-            <div className="text-sm font-medium text-slate-900">{rep.name}</div>
-            <div className="text-xs text-slate-500">{rep.zone}</div>
+            <div className="text-sm font-medium text-slate-900">{repName}</div>
+            <div className="text-xs text-slate-500">{repZone}</div>
           </div>
         </div>
       </div>
@@ -2305,8 +2309,11 @@ function EmployeeDashboardView({ token, currentUser }) {
 // APP SHELL
 // ============================================================
 export default function SeguxatCRM() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [token, setToken] = useState(null);
+  // Persistir sesión en localStorage para que recarga no cierre la sesión
+  const [currentUser, setCurrentUser] = useState(() => {
+    try { const u = localStorage.getItem("sqx_user"); return u ? JSON.parse(u) : null; } catch { return null; }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem("sqx_token") || null);
   const [active, setActive] = useState("dashboard");
   const [leads, setLeads] = useState([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
@@ -2374,7 +2381,10 @@ export default function SeguxatCRM() {
   }
 
   if (!currentUser) {
-    return <LoginView onLogin={(employee, tok) => { setCurrentUser(employee); setToken(tok); }} />;
+    return <LoginView onLogin={(employee, tok) => {
+      setCurrentUser(employee); setToken(tok);
+      try { localStorage.setItem("sqx_user", JSON.stringify(employee)); localStorage.setItem("sqx_token", tok || ""); } catch {}
+    }} />;
   }
 
   const isDirector = currentUser.role === "director";
@@ -2394,6 +2404,7 @@ export default function SeguxatCRM() {
     setCurrentUser(null);
     setToken(null);
     setActive("dashboard");
+    try { localStorage.removeItem("sqx_user"); localStorage.removeItem("sqx_token"); } catch {}
   }
 
   return (
