@@ -1375,7 +1375,7 @@ function ClientesView() {
   const suspendidos = 12;
   // MRR: mix de kits — ~60% esencial(24,90) ~30% total(34,90) ~10% negocio(49,90)
   // (8247 * 0.60 * 24.90) + (8247 * 0.30 * 34.90) + (8247 * 0.10 * 49.90) = ~249.800€
-  const mrrTotal = 249847;
+  const mrrTotal = 58400;
 
   return (
     <div className="space-y-4">
