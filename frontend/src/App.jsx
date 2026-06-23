@@ -663,7 +663,7 @@ function AsignarCitaModal({ lead, onClose, onConfirm }) {
               <span className="ml-auto text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">✓ Entregado</span>
             </div>
             <div className="bg-green-500 text-white text-xs rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] leading-relaxed">
-              Hola {lead.name}, su instalación Seguxat está confirmada para el <strong>{dateLabel}</strong> a las <strong>{time}h</strong>. Le atenderá {tech?.name}. ¿Dudas? Llame al 900 000 001.
+              Hola {lead.name}, su instalación Seguxat está confirmada para el <strong>{dateLabel}</strong> a las <strong>{time}h</strong>. Le atenderá {tech?.name}. ¿Dudas? Llame al 910 626 738.
             </div>
             {clientEmail && (
               <div className="mt-3">
@@ -851,7 +851,7 @@ function AsignarCitaModal({ lead, onClose, onConfirm }) {
                   <Phone className="w-3.5 h-3.5" /> Preview SMS al cliente
                 </div>
                 <div className="bg-green-500 text-white text-xs rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] leading-relaxed">
-                  Hola {lead?.name}, su instalación Seguxat está confirmada para el <strong>{dateLabel}</strong> a las <strong>{time}h</strong>. Le atenderá {selectedTech?.name}. ¿Dudas? Llame al 900 000 001.
+                  Hola {lead?.name}, su instalación Seguxat está confirmada para el <strong>{dateLabel}</strong> a las <strong>{time}h</strong>. Le atenderá {selectedTech?.name}. ¿Dudas? Llame al 910 626 738.
                 </div>
               </div>
             )}
