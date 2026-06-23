@@ -504,27 +504,48 @@ function LeadPanel({ lead, onClose, onMove, currentUser }) {
           className="flex-1 flex items-center justify-center gap-1 border border-slate-300 rounded-lg py-2 text-sm font-medium text-slate-600 disabled:opacity-40 hover:bg-slate-50">
           <ArrowLeft className="w-4 h-4" /> Atrás
         </button>
-        <button disabled={stageIdx === STAGES.length - 1} onClick={() => onMove(lead.id, 1)}
-          className="flex-1 flex items-center justify-center gap-1 bg-amber-500 hover:bg-amber-600 rounded-lg py-2 text-sm font-medium text-white disabled:opacity-40">
-          Avanzar <ArrowRight className="w-4 h-4" />
-        </button>
+        {stageIdx === STAGES.length - 1 ? (
+          <button disabled className="flex-1 flex items-center justify-center gap-1 bg-emerald-600 rounded-lg py-2 text-sm font-medium text-white opacity-60">
+            <CheckCircle2 className="w-4 h-4" /> Completado
+          </button>
+        ) : (
+          <button onClick={() => {
+            const nextStage = STAGES[stageIdx + 1].id;
+            onMove(lead.id, 1, nextStage);
+          }}
+            className="flex-1 flex items-center justify-center gap-1 bg-amber-500 hover:bg-amber-600 rounded-lg py-2 text-sm font-medium text-white">
+            {STAGES[stageIdx + 1]?.id === "cita" || STAGES[stageIdx + 1]?.id === "instalacion" || STAGES[stageIdx + 1]?.id === "contrato"
+              ? <><CalendarDays className="w-4 h-4" /> Agendar cita</>
+              : <>Avanzar <ArrowRight className="w-4 h-4" /></>
+            }
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-function PipelineView({ leads, setLeads, loading, token, moveLeadStage, createLead, currentUser }) {
+function PipelineView({ leads, setLeads, loading, token, moveLeadStage, createLead, currentUser, onGoToAgenda }) {
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  function moveStage(id, dir) {
+  // dir: -1/+1 direction, nextStage: optional explicit target stage
+  function moveStage(id, dir, nextStage) {
     const lead = leads.find(l => l.id === id);
     if (!lead) return;
     const idx = STAGES.findIndex((s) => s.id === lead.stage);
     const newIdx = Math.min(STAGES.length - 1, Math.max(0, idx + dir));
-    const newStage = STAGES[newIdx].id;
+    const newStage = nextStage || STAGES[newIdx].id;
     moveLeadStage(id, newStage);
-    setSelected((sel) => sel && sel.id === id ? { ...sel, stage: newStage, days: 0 } : sel);
+    const updatedLead = { ...lead, stage: newStage, days: 0 };
+    setSelected((sel) => sel && sel.id === id ? updatedLead : sel);
+    // Si avanza a cita/contrato/instalacion → ir directo a Agenda con modal abierto
+    if (["cita","contrato","instalacion"].includes(newStage) && onGoToAgenda) {
+      setTimeout(() => {
+        setSelected(null);
+        onGoToAgenda(updatedLead);
+      }, 400);
+    }
   }
 
   function addLead(form) {
@@ -884,7 +905,7 @@ function AsignarCitaModal({ lead, onClose, onConfirm }) {
   );
 }
 
-function AgendaView({ currentUser, instalaciones, setInstalaciones, leads, token }) {
+function AgendaView({ currentUser, instalaciones, setInstalaciones, leads, token, autoLead, clearAutoLead }) {
   const [modalLead, setModalLead] = useState(null);
 
   // Cargar instalaciones desde API al montar
@@ -895,6 +916,14 @@ function AgendaView({ currentUser, instalaciones, setInstalaciones, leads, token
       .then(data => { if (data.instalaciones) setInstalaciones(data.instalaciones); })
       .catch(() => {});
   }, [token]);
+
+  // Auto-abrir modal si venimos desde Pipeline con un lead
+  useEffect(() => {
+    if (autoLead) {
+      setModalLead(autoLead);
+      if (clearAutoLead) clearAutoLead();
+    }
+  }, [autoLead]);
   const [filterTech, setFilterTech] = useState("all");
   const [filterCoord, setFilterCoord] = useState("all");
 
@@ -2510,6 +2539,7 @@ export default function SeguxatCRM() {
   const [leads, setLeads] = useState([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [instalaciones, setInstalaciones] = useState(INITIAL_INSTALACIONES);
+  const [agendaAutoLead, setAgendaAutoLead] = useState(null);
 
   // Cargar leads desde la API al hacer login
   useEffect(() => {
@@ -2584,8 +2614,9 @@ export default function SeguxatCRM() {
 
   const views = {
     dashboard: isDirector ? <DashboardView /> : <EmployeeDashboardView token={token} currentUser={currentUser} />,
-    pipeline: <PipelineView leads={leads} setLeads={setLeads} loading={leadsLoading} token={token} moveLeadStage={moveLeadStage} createLead={createLead} currentUser={currentUser} />,
-    agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} token={token} />,
+    pipeline: <PipelineView leads={leads} setLeads={setLeads} loading={leadsLoading} token={token} moveLeadStage={moveLeadStage} createLead={createLead} currentUser={currentUser}
+      onGoToAgenda={(lead) => { setAgendaAutoLead(lead); setActive("agenda"); }} />,
+    agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} token={token} autoLead={agendaAutoLead} clearAutoLead={() => setAgendaAutoLead(null)} />,
     clientes: <ClientesView />,
     catalogo: <CatalogoView />,
     pagos: <PagosView />,
