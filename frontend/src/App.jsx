@@ -167,6 +167,27 @@ const REP_PERF = [
   { rep: "r4", ventas: 7, objetivo: 10 },
 ];
 
+// Técnicos instaladores con zonas de cobertura
+const TECHNICIANS = [
+  { id: "t1", name: "Carlos Mendoza", initials: "CM", zones: ["Patraix", "Jesús", "La Punta"], phone: "611 001 001", email: "carlos.mendoza@seguxat.es", color: "bg-emerald-600", available: true },
+  { id: "t2", name: "Rubén Palau", initials: "RP", zones: ["Ruzafa", "Eixample", "Gran Via"], phone: "611 001 002", email: "ruben.palau@seguxat.es", color: "bg-sky-600", available: true },
+  { id: "t3", name: "Adrián Valls", initials: "AV", zones: ["Benimaclet", "Algirós", "Pla del Real"], phone: "611 001 003", email: "adrian.valls@seguxat.es", color: "bg-violet-600", available: false },
+  { id: "t4", name: "Sergio Mora", initials: "SM", zones: ["Centro", "Ciutat Vella", "Cabanyal", "El Carmen"], phone: "611 001 004", email: "sergio.mora@seguxat.es", color: "bg-rose-600", available: true },
+];
+
+// Coordinadoras con correo y color
+const COORDINATORS = [
+  { id: "k1", name: "Karla Jiménez", initials: "KJ", email: "karla@seguxat.es", color: "bg-pink-500" },
+  { id: "k2", name: "María Olmos", initials: "MO", email: "maria@seguxat.es", color: "bg-indigo-500" },
+];
+
+// Instalaciones confirmadas (estado global compartido con Agenda)
+const INITIAL_INSTALACIONES = [
+  { id: "i1", leadName: "Encarna Tortosa", zone: "Patraix", kit: "esencial", techId: "t1", date: "2026-06-25", time: "09:00", coordinatorId: "k1", clientPhone: "612 345 099", clientEmail: "encarna@gmail.com", status: "confirmada", notified: true },
+  { id: "i2", leadName: "Lola Ferrandis", zone: "Benimaclet", kit: "total", techId: "t3", date: "2026-06-26", time: "10:30", coordinatorId: "k2", clientPhone: "612 345 016", clientEmail: "lola.f@gmail.com", status: "confirmada", notified: true },
+  { id: "i3", leadName: "Gimnasio Pulso", zone: "Algirós", kit: "negocio", techId: "t3", date: "2026-06-27", time: "11:00", coordinatorId: "k1", clientPhone: "612 345 015", clientEmail: "admin@gimnasiopulso.es", status: "pendiente", notified: false },
+];
+
 const AGENDA = [
   { day: "Lunes 16", items: [
     { time: "09:00", name: "Encarna Tortosa", type: "Instalación", zone: "Patraix", rep: "r4" },
@@ -559,31 +580,536 @@ function PipelineView() {
   );
 }
 
-function AgendaView() {
+// ============================================================
+// AGENDA — Módulo profesional de instalaciones
+// ============================================================
+
+function techById(id) { return TECHNICIANS.find((t) => t.id === id); }
+function coordById(id) { return COORDINATORS.find((c) => c.id === id); }
+
+function TechAvatar({ tech, size = "w-8 h-8" }) {
+  if (!tech) return null;
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {AGENDA.map((day) => (
-        <div key={day.day} className="bg-white rounded-xl border border-slate-200 p-4">
-          <h3 className="font-serif text-base font-bold text-slate-900 mb-3">{day.day}</h3>
-          <div className="space-y-2">
-            {day.items.map((item, i) => {
-              const rep = repById(item.rep);
-              const typeColor = item.type === "Instalación" ? "text-emerald-600" : item.type === "Firma contrato" ? "text-teal-600" : "text-amber-600";
-              return (
-                <div key={i} className="flex items-center gap-3 border border-slate-100 rounded-lg p-2.5">
-                  <div className="text-xs font-semibold text-slate-700 tabular-nums w-12">{item.time}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-900 truncate">{item.name}</div>
-                    <div className={`text-xs ${typeColor}`}>{item.type} · {item.zone}</div>
+    <div className={`${size} ${tech.color} rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+      {tech.initials}
+    </div>
+  );
+}
+
+// Modal de asignación de cita de instalación
+function AsignarCitaModal({ lead, onClose, onConfirm }) {
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("09:00");
+  const [techId, setTechId] = useState("");
+  const [coordId, setCoordId] = useState("k1");
+  const [clientPhone, setClientPhone] = useState(lead?.phone || "");
+  const [clientEmail, setClientEmail] = useState("");
+  const [step, setStep] = useState("form"); // form | confirm | sending | success
+
+  // Técnicos que cubren la zona del lead
+  const zone = lead?.zone || "";
+  const matchingTechs = TECHNICIANS.filter((t) =>
+    t.zones.some((z) => zone.toLowerCase().includes(z.toLowerCase()) || z.toLowerCase().includes(zone.toLowerCase()))
+  );
+  const otherTechs = TECHNICIANS.filter((t) => !matchingTechs.find((m) => m.id === t.id));
+
+  const selectedTech = techById(techId);
+  const selectedCoord = coordById(coordId);
+
+  const hoursOptions = ["08:00","09:00","10:00","10:30","11:00","11:30","12:00","16:00","16:30","17:00","17:30","18:00"];
+
+  function handleConfirm() {
+    if (!date || !time || !techId) return;
+    setStep("sending");
+    // Simular envío (1.8s)
+    setTimeout(() => {
+      setStep("success");
+      onConfirm({
+        leadName: lead.name,
+        zone: lead.zone,
+        kit: lead.kit,
+        techId,
+        date,
+        time,
+        coordinatorId: coordId,
+        clientPhone,
+        clientEmail,
+        status: "confirmada",
+        notified: true,
+      });
+    }, 1800);
+  }
+
+  const dateLabel = date ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }) : "";
+
+  if (step === "success") {
+    const tech = techById(techId);
+    const coord = coordById(coordId);
+    return (
+      <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-40 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-9 h-9 text-emerald-600" />
+          </div>
+          <h3 className="font-serif text-xl font-bold text-slate-900 mb-1">¡Cita confirmada!</h3>
+          <p className="text-sm text-slate-500 mb-5">Las notificaciones se han enviado correctamente.</p>
+
+          {/* Notificación al cliente */}
+          <div className="bg-slate-50 rounded-xl p-4 mb-3 text-left">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                <Phone className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">SMS enviado al cliente</span>
+              <span className="ml-auto text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">✓ Entregado</span>
+            </div>
+            <div className="bg-green-500 text-white text-xs rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] leading-relaxed">
+              Hola {lead.name}, su instalación Seguxat está confirmada para el <strong>{dateLabel}</strong> a las <strong>{time}h</strong>. Le atenderá {tech?.name}. ¿Dudas? Llame al 900 000 001.
+            </div>
+            {clientEmail && (
+              <div className="mt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Mail className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <Avatar rep={rep} size="w-6 h-6" />
+                  <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Email al cliente</span>
+                  <span className="ml-auto text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">✓ Enviado</span>
                 </div>
-              );
-            })}
-            {day.items.length === 0 && <div className="text-xs text-slate-400 italic py-2">Sin visitas programadas</div>}
+                <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700">
+                  <div className="font-medium mb-0.5">Confirmación de instalación — Seguxat</div>
+                  <div className="text-slate-500">Para: {clientEmail}</div>
+                  <div className="text-slate-500 mt-1">Su cita está programada para el <strong>{dateLabel}</strong> a las <strong>{time}h</strong> en {lead.zone}.</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Notificación al técnico */}
+          <div className="bg-slate-50 rounded-xl p-4 mb-5 text-left">
+            <div className="flex items-center gap-2 mb-3">
+              <TechAvatar tech={tech} size="w-6 h-6" />
+              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Notificación al técnico</span>
+              <span className="ml-auto text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">✓ Enviado</span>
+            </div>
+            <div className="bg-slate-800 text-white text-xs rounded-2xl rounded-tl-none px-3 py-2 max-w-[90%] leading-relaxed">
+              📋 Nueva instalación asignada: <strong>{lead.name}</strong> · {lead.zone} · Kit {KITS[lead.kit]?.name} · <strong>{dateLabel} {time}h</strong>. Coordinadora: {coord?.name}.
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <Mail className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs text-slate-500">Email enviado a {tech?.email}</span>
+              <span className="ml-auto text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">✓</span>
+            </div>
+          </div>
+
+          {/* Gestionado por */}
+          <div className="flex items-center justify-center gap-2 text-xs text-slate-400 mb-5">
+            <div className={`w-5 h-5 ${coord?.color} rounded-full flex items-center justify-center text-white text-[9px] font-bold`}>{coord?.initials}</div>
+            Gestionado por <strong className="text-slate-600">{coord?.name}</strong> · {coord?.email}
+          </div>
+
+          <button onClick={onClose}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-xl py-3">
+            Volver a la agenda
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
+          <div>
+            <h3 className="font-serif text-lg font-bold text-slate-900">Asignar cita de instalación</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{lead?.name} · {lead?.zone} · Kit {KITS[lead?.kit]?.name}</p>
+          </div>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+        </div>
+
+        {step === "sending" && (
+          <div className="p-10 text-center">
+            <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mx-auto mb-4" />
+            <p className="text-sm font-medium text-slate-700">Enviando notificaciones…</p>
+            <p className="text-xs text-slate-400 mt-1">SMS al cliente · Email al técnico · Registro en agenda</p>
+          </div>
+        )}
+
+        {step === "form" && (
+          <div className="p-6 space-y-5">
+            {/* Fecha y hora */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">Fecha de instalación</label>
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} min="2026-06-23"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">Hora</label>
+                <select value={time} onChange={(e) => setTime(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                  {hoursOptions.map((h) => <option key={h} value={h}>{h}h</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Técnico */}
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Técnico instalador</label>
+              {matchingTechs.length > 0 && (
+                <div className="mb-2">
+                  <div className="text-xs text-emerald-600 font-medium mb-1.5 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> Cubren la zona "{zone}"
+                  </div>
+                  <div className="space-y-2">
+                    {matchingTechs.map((t) => (
+                      <button key={t.id} onClick={() => setTechId(t.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg border transition ${techId === t.id ? "border-emerald-400 bg-emerald-50" : "border-slate-200 hover:border-slate-300"}`}>
+                        <TechAvatar tech={t} />
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-medium text-slate-900">{t.name}</div>
+                          <div className="text-xs text-slate-500">{t.zones.join(" · ")}</div>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {t.available ? "Disponible" : "Ocupado"}
+                        </span>
+                        {techId === t.id && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {otherTechs.length > 0 && (
+                <details className="mt-1">
+                  <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600">Otros técnicos (fuera de zona)</summary>
+                  <div className="space-y-2 mt-2">
+                    {otherTechs.map((t) => (
+                      <button key={t.id} onClick={() => setTechId(t.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg border transition ${techId === t.id ? "border-emerald-400 bg-emerald-50" : "border-slate-200 hover:border-slate-300 opacity-60"}`}>
+                        <TechAvatar tech={t} />
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-medium text-slate-900">{t.name}</div>
+                          <div className="text-xs text-slate-500">{t.zones.join(" · ")}</div>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {t.available ? "Disponible" : "Ocupado"}
+                        </span>
+                        {techId === t.id && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+
+            {/* Coordinadora */}
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Coordinadora responsable</label>
+              <div className="flex gap-3">
+                {COORDINATORS.map((c) => (
+                  <button key={c.id} onClick={() => setCoordId(c.id)}
+                    className={`flex-1 flex items-center gap-2 p-3 rounded-lg border transition ${coordId === c.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 hover:border-slate-300"}`}>
+                    <div className={`w-8 h-8 ${c.color} rounded-full flex items-center justify-center text-white text-xs font-bold`}>{c.initials}</div>
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-slate-900">{c.name}</div>
+                      <div className="text-xs text-slate-500">{c.email}</div>
+                    </div>
+                    {coordId === c.id && <CheckCircle2 className="w-4 h-4 text-indigo-500 ml-auto shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Contacto cliente */}
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Notificación al cliente</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Teléfono (SMS)</label>
+                  <div className="relative">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)}
+                      placeholder="612 000 000"
+                      className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Email (opcional)</label>
+                  <div className="relative">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)}
+                      placeholder="cliente@email.com"
+                      className="w-full border border-slate-300 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview del SMS */}
+            {date && techId && (
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                <div className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> Preview SMS al cliente
+                </div>
+                <div className="bg-green-500 text-white text-xs rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] leading-relaxed">
+                  Hola {lead?.name}, su instalación Seguxat está confirmada para el <strong>{dateLabel}</strong> a las <strong>{time}h</strong>. Le atenderá {selectedTech?.name}. ¿Dudas? Llame al 900 000 001.
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={onClose}
+                className="flex-1 border border-slate-300 rounded-xl py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                Cancelar
+              </button>
+              <button
+                disabled={!date || !time || !techId}
+                onClick={handleConfirm}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 rounded-xl py-2.5 text-sm font-medium text-white flex items-center justify-center gap-2">
+                <Bell className="w-4 h-4" /> Confirmar y notificar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AgendaView() {
+  const [instalaciones, setInstalaciones] = useState(INITIAL_INSTALACIONES);
+  const [modalLead, setModalLead] = useState(null);
+  const [viewMode, setViewMode] = useState("semana"); // semana | tecnicos | coordinadoras
+  const [filterTech, setFilterTech] = useState("all");
+  const [filterCoord, setFilterCoord] = useState("all");
+
+  // Leads en fase instalación = candidatos a asignar
+  const leadsInstalacion = INITIAL_LEADS.filter((l) => l.stage === "instalacion" || l.stage === "contrato");
+
+  function handleConfirm(data) {
+    setInstalaciones((prev) => [...prev, { id: "i" + Date.now(), ...data }]);
+    setModalLead(null);
+  }
+
+  const filtered = instalaciones.filter((i) => {
+    if (filterTech !== "all" && i.techId !== filterTech) return false;
+    if (filterCoord !== "all" && i.coordinatorId !== filterCoord) return false;
+    return true;
+  });
+
+  // Agrupar por fecha para vista semanal
+  const byDate = filtered.reduce((acc, inst) => {
+    if (!acc[inst.date]) acc[inst.date] = [];
+    acc[inst.date].push(inst);
+    return acc;
+  }, {});
+  const sortedDates = Object.keys(byDate).sort();
+
+  const typeColor = { "confirmada": "bg-emerald-100 text-emerald-700", "pendiente": "bg-amber-100 text-amber-700", "realizada": "bg-slate-100 text-slate-600" };
+
+  return (
+    <div className="space-y-5">
+      {/* Header con controles */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+          {[["semana", "Calendario"], ["tecnicos", "Por técnico"], ["coordinadoras", "Por coordinadora"]].map(([id, label]) => (
+            <button key={id} onClick={() => setViewMode(id)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <select value={filterTech} onChange={(e) => setFilterTech(e.target.value)}
+            className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <option value="all">Todos los técnicos</option>
+            {TECHNICIANS.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <select value={filterCoord} onChange={(e) => setFilterCoord(e.target.value)}
+            className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <option value="all">Todas las coordinadoras</option>
+            {COORDINATORS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Leads pendientes de asignar */}
+      {leadsInstalacion.filter((l) => !instalaciones.find((i) => i.leadName === l.name)).length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Bell className="w-4 h-4 text-amber-600" />
+            <span className="text-sm font-semibold text-amber-800">Leads listos para asignar instalación</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {leadsInstalacion.filter((l) => !instalaciones.find((i) => i.leadName === l.name)).map((l) => (
+              <button key={l.id} onClick={() => setModalLead(l)}
+                className="flex items-center gap-2 bg-white border border-amber-300 rounded-lg px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-100 transition">
+                <Plus className="w-3.5 h-3.5" />
+                {l.name} · {l.zone}
+              </button>
+            ))}
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Vista calendario semanal */}
+      {viewMode === "semana" && (
+        <div className="space-y-3">
+          {sortedDates.length === 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400 text-sm">
+              No hay instalaciones programadas con los filtros actuales.
+            </div>
+          )}
+          {sortedDates.map((date) => {
+            const dateObj = new Date(date + "T12:00:00");
+            const dayLabel = dateObj.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+            const items = byDate[date].sort((a, b) => a.time.localeCompare(b.time));
+            return (
+              <div key={date} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className="bg-slate-900 px-4 py-2.5 flex items-center justify-between">
+                  <span className="text-white text-sm font-semibold capitalize">{dayLabel}</span>
+                  <span className="text-slate-400 text-xs">{items.length} instalación{items.length !== 1 ? "es" : ""}</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {items.map((inst, i) => {
+                    const tech = techById(inst.techId);
+                    const coord = coordById(inst.coordinatorId);
+                    return (
+                      <div key={i} className="flex items-center gap-4 px-4 py-3 hover:bg-slate-50">
+                        <div className="text-sm font-bold text-slate-900 tabular-nums w-14 shrink-0">{inst.time}h</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-900">{inst.leadName}</div>
+                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3" />{inst.zone} · {KITS[inst.kit]?.name}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <TechAvatar tech={tech} size="w-7 h-7" />
+                          <div className="hidden sm:block">
+                            <div className="text-xs font-medium text-slate-700">{tech?.name}</div>
+                            <div className="text-xs text-slate-400">{coord?.name}</div>
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${typeColor[inst.status] || "bg-slate-100 text-slate-600"}`}>
+                          {inst.status}
+                        </span>
+                        {inst.notified && (
+                          <div className="flex items-center gap-1 shrink-0" title="Notificado">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Vista por técnico */}
+      {viewMode === "tecnicos" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {TECHNICIANS.map((tech) => {
+            const techInst = filtered.filter((i) => i.techId === tech.id).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+            return (
+              <div key={tech.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className={`px-4 py-3 flex items-center gap-3 ${tech.color} bg-opacity-10`} style={{ background: "var(--color-background-secondary)" }}>
+                  <TechAvatar tech={tech} />
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm">{tech.name}</div>
+                    <div className="text-xs text-slate-500">{tech.zones.join(" · ")}</div>
+                  </div>
+                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${tech.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {tech.available ? "Disponible" : "Ocupado"}
+                  </span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {techInst.length === 0 && <div className="px-4 py-4 text-xs text-slate-400 italic">Sin instalaciones asignadas</div>}
+                  {techInst.map((inst, i) => {
+                    const dateObj = new Date(inst.date + "T12:00:00");
+                    const dayLabel = dateObj.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
+                    const coord = coordById(inst.coordinatorId);
+                    return (
+                      <div key={i} className="px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-slate-500 capitalize">{dayLabel} · {inst.time}h</div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeColor[inst.status] || "bg-slate-100 text-slate-600"}`}>{inst.status}</span>
+                        </div>
+                        <div className="text-sm font-medium text-slate-900 mt-0.5">{inst.leadName}</div>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{inst.zone} · {KITS[inst.kit]?.name}</div>
+                          {inst.notified && <span className="text-xs text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Notificado</span>}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5">Coord: {coord?.name}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-1.5 text-xs text-slate-500">
+                  <Phone className="w-3 h-3" />{tech.phone}
+                  <span className="mx-1">·</span>
+                  <Mail className="w-3 h-3" />{tech.email}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Vista por coordinadora */}
+      {viewMode === "coordinadoras" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {COORDINATORS.map((coord) => {
+            const coordInst = filtered.filter((i) => i.coordinatorId === coord.id).sort((a, b) => a.date.localeCompare(b.date));
+            const notified = coordInst.filter((i) => i.notified).length;
+            return (
+              <div key={coord.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-100">
+                  <div className={`w-10 h-10 ${coord.color} rounded-full flex items-center justify-center text-white text-sm font-bold`}>{coord.initials}</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm">{coord.name}</div>
+                    <div className="text-xs text-slate-500">{coord.email}</div>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <div className="text-lg font-bold text-slate-900 tabular-nums">{coordInst.length}</div>
+                    <div className="text-xs text-slate-400">instalaciones</div>
+                  </div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {coordInst.length === 0 && <div className="px-4 py-4 text-xs text-slate-400 italic">Sin instalaciones gestionadas</div>}
+                  {coordInst.map((inst, i) => {
+                    const tech = techById(inst.techId);
+                    const dateObj = new Date(inst.date + "T12:00:00");
+                    const dayLabel = dateObj.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
+                    return (
+                      <div key={i} className="px-4 py-3 flex items-center gap-3">
+                        <div className="text-xs text-slate-500 w-24 shrink-0 capitalize">{dayLabel} · {inst.time}h</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-900 truncate">{inst.leadName}</div>
+                          <div className="text-xs text-slate-500">{inst.zone} · {tech?.name}</div>
+                        </div>
+                        {inst.notified
+                          ? <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium shrink-0">✓ Notificado</span>
+                          : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium shrink-0">Pendiente</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-500">
+                  {notified} de {coordInst.length} clientes notificados
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal de asignación */}
+      {modalLead && (
+        <AsignarCitaModal lead={modalLead} onClose={() => setModalLead(null)} onConfirm={handleConfirm} />
+      )}
     </div>
   );
 }
