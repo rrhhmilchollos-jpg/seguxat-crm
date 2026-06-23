@@ -2382,7 +2382,7 @@ export default function SeguxatCRM() {
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
           <div>
             <h1 className="font-serif text-xl font-bold text-slate-900">{PAGE_TITLES[active]}</h1>
-            <p className="text-xs text-slate-400">Lunes, 15 de junio de 2026</p>
+            <p className="text-xs text-slate-400">Martes, 23 de junio de 2026 · v2.1</p>
           </div>
           <div className="flex items-center gap-4">
             <button className="relative text-slate-400 hover:text-slate-600">
