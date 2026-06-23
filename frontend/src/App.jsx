@@ -2905,33 +2905,60 @@ const EXAMPLE_VISITS = [
   { client: "Comercial Vidal S.L.", phone: "961 22 33 44", date: "Pasado mañana 09:00", plan: "Negocio", status: "Confirmada" },
 ];
 
-function EmployeeDashboardView({ token, currentUser }) {
+function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones = [], setActive }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showGuide, setShowGuide] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
+  const firstName = currentUser.name?.split(" ")[0] || "compañero/a";
+  const roleLabel = ROLE_LABELS[currentUser.role] || currentUser.role;
+
+  const hora = new Date().getHours();
+  const mes = new Date().getMonth(); // 5=jun, 6=jul, 7=ago
+
+  // Saludos divertidos que rotan según la hora
+  const SALUDOS_MANANA = [
+    `☀️ ¡Buenos días, ${firstName}! Hoy va a ser un gran día para cerrar contratos.`,
+    `🌅 ¡Arriba, ${firstName}! El café está caliente y los leads esperan.`,
+    `🚀 ¡Buenos días! ${firstName} al poder — que tiemble la competencia.`,
+    `😴 Ey ${firstName}, ya sé que es pronto… pero las alarmas no se instalan solas.`,
+  ];
+  const SALUDOS_TARDE = [
+    `🌞 ¡Buenas tardes, ${firstName}! ¿Cuántos contratos llevamos hoy?`,
+    `☕ Tardes, ${firstName}. Si necesitas café, el catálogo de Seguxat te dará energía.`,
+    `💪 ¡A tope, ${firstName}! La tarde es cuando se cierran los mejores tratos.`,
+    `🎯 ¡Buenas, ${firstName}! Queda tarde — tiempo perfecto para una llamada más.`,
+  ];
+  const SALUDOS_NOCHE = [
+    `🌙 ¡Buenas noches, ${firstName}! Trabajando hasta tarde, eso es dedicación.`,
+    `🦉 Ey ${firstName}, los noctámbulos de Seguxat os lo currais mucho.`,
+    `⭐ Tarde pero aquí estás, ${firstName}. Los mejores nunca paran.`,
+  ];
+
+  // Frases de verano / temporada
+  const VERANO_TIPS = mes >= 5 && mes <= 7 ? [
+    "🏖️ Recuerda: con el calor del verano, los clientes también quieren proteger sus hogares mientras están de vacaciones.",
+    "☀️ Temporada alta para alarmas de segunda residencia — ¡aprovéchalo!",
+    "🌊 Muchos clientes se van de vacaciones este mes. Es el momento perfecto para ofrecerles tranquilidad.",
+    "🏄 El verano mola, pero los ladrones también tienen vacaciones activas. ¡Cuéntaselo a tus leads!",
+  ] : [];
+
+  const allSaludos = hora < 12 ? SALUDOS_MANANA : hora < 20 ? SALUDOS_TARDE : SALUDOS_NOCHE;
+  const saludo = allSaludos[new Date().getDate() % allSaludos.length];
+  const verano = VERANO_TIPS[new Date().getDate() % Math.max(VERANO_TIPS.length, 1)];
 
   async function load() {
-    if (!token) { setLoading(false); setError("offline"); return; }
-    setLoading(true);
+    if (!token) { setLoading(false); return; }
     try {
       const res = await fetch(`${API_BASE}/employees/me/tasks`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
       setTasks(data.tasks || []);
-      setError(null);
-    } catch {
-      setError("offline");
-    } finally {
-      setLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   }
-
   useEffect(() => { load(); }, [token]);
 
   async function toggleTask(task) {
     if (!token) return;
-    setTasks((prev) => prev.map((t) => (t._id === task._id ? { ...t, done: !t.done } : t)));
+    setTasks(prev => prev.map(t => t._id === task._id ? { ...t, done: !t.done } : t));
     await fetch(`${API_BASE}/employees/me/tasks/${task._id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -2939,127 +2966,165 @@ function EmployeeDashboardView({ token, currentUser }) {
     });
   }
 
-  const pending = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
-  const roleLabel = ROLE_LABELS[currentUser.role] || currentUser.role;
+  const pending = tasks.filter(t => !t.done);
+  const done = tasks.filter(t => t.done);
+  const pct = tasks.length > 0 ? Math.round((done.length / tasks.length) * 100) : 0;
   const guide = ROLE_GUIDES[currentUser.role];
-  const showVisitsExample = currentUser.role === "televenta";
+  const citasPendientes = instalaciones.filter(i => i.status === "pendiente").length;
+  const confirmadas = instalaciones.filter(i => i.status === "confirmada").length;
+
+  const EMOJIS_ROLE = { comercial:"💼", televenta:"📞", tecnico:"🔧", soporte:"🎧", director:"🎯" };
+  const emojiRole = EMOJIS_ROLE[currentUser.role] || "👤";
+
+  const ACCESOS = [
+    { id:"pipeline", emoji:"📋", label:"Citas" },
+    { id:"agenda", emoji:"📅", label:"Agenda" },
+    { id:"clientes", emoji:"👥", label:"Clientes" },
+    { id:"catalogo", emoji:"🛡️", label:"Catálogo" },
+    { id:"pagos", emoji:"💳", label:"Pagos" },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="font-serif text-lg font-bold text-slate-900">Hola, {currentUser.name.split(" ")[0]}</h3>
-        <p className="text-sm text-slate-500 mt-1">
-          {roleLabel} · {currentUser.zone || "Seguxat"}. Aquí tienes tus tareas asignadas y cómo funciona tu día a día.
-        </p>
+    <div className="space-y-4 max-w-2xl">
+
+      {/* ── Saludo del día ─────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-2xl shrink-0">{emojiRole}</div>
+          <div className="flex-1">
+            <p className="text-slate-900 font-semibold text-base leading-snug">{saludo}</p>
+            <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              {roleLabel} · {currentUser.zone || "Seguxat Valencia"} · {new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})}
+            </p>
+          </div>
+        </div>
+
+        {/* Tip de verano */}
+        {verano && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+            {verano}
+          </div>
+        )}
       </div>
 
-      {error === "offline" && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg p-3 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          No se pudo conectar con el backend para cargar tus tareas.
+      {/* ── Mini stats ─────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-slate-900 tabular-nums">{leads.length || "—"}</div>
+          <div className="text-xs text-slate-400 mt-0.5">Leads activos</div>
         </div>
-      )}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-amber-700 tabular-nums">{citasPendientes}</div>
+          <div className="text-xs text-slate-400 mt-0.5">Citas pendientes</div>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-emerald-700 tabular-nums">{confirmadas}</div>
+          <div className="text-xs text-slate-400 mt-0.5">Confirmadas ✓</div>
+        </div>
+      </div>
 
+      {/* ── Accesos rápidos ────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+        <p className="text-xs text-slate-400 font-medium mb-3">Ir a...</p>
+        <div className="flex gap-2 flex-wrap">
+          {ACCESOS.map(a => (
+            <button key={a.id} onClick={() => setActive && setActive(a.id)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 transition text-sm font-medium text-slate-700">
+              {a.emoji} {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Tareas del día ─────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <span>✅</span>
+            <span className="text-sm font-semibold text-slate-900">Tareas de hoy</span>
+            {pending.length > 0 && (
+              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{pending.length}</span>
+            )}
+          </div>
+          {tasks.length > 0 && (
+            <span className="text-xs text-slate-400">{pct}% completado</span>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" /> Un momento...
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="text-3xl mb-2">🎉</div>
+            <div className="text-sm font-medium text-slate-600">Sin tareas asignadas hoy</div>
+            <div className="text-xs text-slate-400 mt-1">Aprovecha para repasar el pipeline o contactar leads.</div>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {[...pending, ...done].map(t => (
+              <button key={t._id} onClick={() => toggleTask(t)}
+                className="w-full flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition text-left group">
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition ${t.done ? "bg-emerald-500 border-emerald-500" : "border-slate-300 group-hover:border-amber-400"}`}>
+                  {t.done && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </div>
+                <div className="flex-1">
+                  <div className={`text-sm font-medium ${t.done ? "text-slate-400 line-through" : "text-slate-900"}`}>{t.title}</div>
+                  {t.description && <div className="text-xs text-slate-400 mt-0.5">{t.description}</div>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Guía del rol — colapsable ──────────────── */}
       {guide && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <button onClick={() => setShowGuide(!showGuide)}
-            className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50">
-            <div className="flex items-center gap-2 text-left">
-              <span className="text-base">📘</span>
-              <span className="text-sm font-semibold text-slate-900">Cómo funciona tu puesto: {roleLabel}</span>
+            className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition">
+            <div className="flex items-center gap-2">
+              <span>📘</span>
+              <span className="text-sm font-semibold text-slate-900">Cómo funciona tu puesto</span>
             </div>
-            <span className="text-xs text-slate-400">{showGuide ? "Ocultar" : "Mostrar"}</span>
+            <span className="text-xs text-slate-400">{showGuide ? "Ocultar ↑" : "Ver ↓"}</span>
           </button>
           {showGuide && (
-            <div className="px-5 pb-5 border-t border-slate-100 pt-4">
-              <p className="text-sm text-slate-600 mb-4">{guide.summary}</p>
-              {guide.steps.length > 0 && (
-                <div className="space-y-2.5">
-                  {guide.steps.map((s, i) => (
-                    <div key={i} className="flex items-start gap-3 bg-slate-50 rounded-lg p-3">
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">{s.title}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{s.detail}</div>
-                      </div>
-                    </div>
-                  ))}
+            <div className="px-5 pb-5 border-t border-slate-100 pt-4 space-y-2">
+              <p className="text-sm text-slate-500 mb-3">{guide.summary}</p>
+              {guide.steps.map((s, i) => (
+                <div key={i} className="flex items-start gap-3 bg-slate-50 rounded-xl p-3">
+                  <div className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-xs font-bold text-slate-600 shrink-0 mt-0.5">{i+1}</div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">{s.title}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{s.detail}</div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </div>
       )}
 
-      {showVisitsExample && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="text-sm font-semibold text-slate-700">Próximas visitas</h4>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Ejemplo ilustrativo</span>
+      {/* ── Mensaje del equipo ─────────────────────── */}
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 flex items-center gap-4">
+        <span className="text-3xl shrink-0">{mes >= 5 && mes <= 7 ? "🏖️" : "🛡️"}</span>
+        <div>
+          <div className="text-white text-sm font-semibold">
+            {mes >= 5 && mes <= 7
+              ? `¡Buen verano, ${firstName}! Seguxat no descansa ni en agosto.`
+              : `¡Gracias por tu trabajo, ${firstName}! 8.247 familias más seguras.`}
           </div>
-          <p className="text-xs text-slate-400 mb-4">Así se verá esta sección cuando haya visitas reales confirmadas. Los datos de abajo son solo de muestra.</p>
-          <div className="space-y-2">
-            {EXAMPLE_VISITS.map((v, i) => (
-              <div key={i} className="flex items-center justify-between border border-slate-100 rounded-lg p-3 opacity-75">
-                <div>
-                  <div className="text-sm font-medium text-slate-900">{v.client}</div>
-                  <div className="text-xs text-slate-500">{v.phone} · {v.plan}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-slate-700">{v.date}</div>
-                  <span className={`text-xs font-medium ${v.status === "Confirmada" ? "text-teal-600" : "text-amber-600"}`}>{v.status}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="text-slate-400 text-xs mt-0.5">— Equipo Seguxat Valencia 🧡</div>
         </div>
-      )}
-
-      <div>
-        <h4 className="text-sm font-semibold text-slate-700 mb-3">Tus tareas de hoy</h4>
-        {loading ? (
-          <div className="text-sm text-slate-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Cargando tareas...</div>
-        ) : tasks.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-sm text-slate-400">
-            Todavía no tienes tareas asignadas. Tu director te las irá añadiendo aquí.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h5 className="text-sm font-semibold text-slate-700 mb-3">Pendientes ({pending.length})</h5>
-              <div className="space-y-2">
-                {pending.map((t) => (
-                  <button key={t._id} onClick={() => toggleTask(t)}
-                    className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-amber-300">
-                    <div className="w-4 h-4 rounded border-2 border-slate-300 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium text-slate-900">{t.title}</div>
-                      {t.description && <div className="text-xs text-slate-500 mt-0.5">{t.description}</div>}
-                    </div>
-                  </button>
-                ))}
-                {pending.length === 0 && <div className="text-xs text-slate-400 italic">¡Todo hecho! 🎉</div>}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
-              <h5 className="text-sm font-semibold text-slate-700 mb-3">Completadas ({done.length})</h5>
-              <div className="space-y-2">
-                {done.map((t) => (
-                  <button key={t._id} onClick={() => toggleTask(t)}
-                    className="w-full text-left flex items-start gap-3 border border-slate-100 rounded-lg p-3 hover:border-slate-300 opacity-60">
-                    <CheckCircle2 className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
-                    <div className="text-sm text-slate-500 line-through">{t.title}</div>
-                  </button>
-                ))}
-                {done.length === 0 && <div className="text-xs text-slate-400 italic">Aún ninguna completada hoy.</div>}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
     </div>
   );
 }
+
 
 // ============================================================
 // APP SHELL
@@ -3162,7 +3227,7 @@ export default function SeguxatCRM() {
   const nav = isDirector ? [...NAV, ...DIRECTOR_ONLY_NAV, { id: "empleados", label: "Empleados", icon: UserCog }] : NAV;
 
   const views = {
-    dashboard: isDirector ? <DashboardView /> : <EmployeeDashboardView token={token} currentUser={currentUser} />,
+    dashboard: isDirector ? <DashboardView /> : <EmployeeDashboardView token={token} currentUser={currentUser} leads={leads} instalaciones={instalaciones} setActive={setActive} />,
     pipeline: <PipelineView leads={leads} setLeads={setLeads} loading={leadsLoading} token={token} moveLeadStage={moveLeadStage} createLead={createLead} currentUser={currentUser}
       onGoToAgenda={(lead) => { setAgendaAutoLead(lead); setActive("agenda"); }} />,
     agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} token={token} autoLead={agendaAutoLead} clearAutoLead={() => setAgendaAutoLead(null)} />,
