@@ -144,12 +144,12 @@ const CUSTOMERS = [
 ];
 
 const VENTAS_MES = [
-  { mes: "Ene", instalaciones: 8 },
-  { mes: "Feb", instalaciones: 11 },
-  { mes: "Mar", instalaciones: 9 },
-  { mes: "Abr", instalaciones: 14 },
-  { mes: "May", instalaciones: 12 },
-  { mes: "Jun", instalaciones: 16 },
+  { mes: "Ene", instalaciones: 98, facturacion: 41200 },
+  { mes: "Feb", instalaciones: 112, facturacion: 47800 },
+  { mes: "Mar", instalaciones: 124, facturacion: 51300 },
+  { mes: "Abr", instalaciones: 138, facturacion: 54900 },
+  { mes: "May", instalaciones: 131, facturacion: 52700 },
+  { mes: "Jun", instalaciones: 147, facturacion: 58400 },
 ];
 
 const LEADS_ORIGEN = [
@@ -161,10 +161,10 @@ const LEADS_ORIGEN = [
 ];
 
 const REP_PERF = [
-  { rep: "r1", ventas: 9, objetivo: 10 },
-  { rep: "r2", ventas: 13, objetivo: 10 },
-  { rep: "r3", ventas: 11, objetivo: 10 },
-  { rep: "r4", ventas: 7, objetivo: 10 },
+  { rep: "r1", ventas: 38, objetivo: 35 },
+  { rep: "r2", ventas: 44, objetivo: 40 },
+  { rep: "r3", ventas: 41, objetivo: 40 },
+  { rep: "r4", ventas: 29, objetivo: 35 },
 ];
 
 // Técnicos instaladores con zonas de cobertura
@@ -281,23 +281,24 @@ function StatusBadge({ status }) {
 // VIEWS
 // ============================================================
 function DashboardView() {
-  const totalLeadsActivos = INITIAL_LEADS.filter((l) => l.stage !== "instalacion").length;
-  const citasSemana = AGENDA.reduce((acc, d) => acc + d.items.filter((i) => i.type !== "Instalación").length, 0);
-  const mrr = CUSTOMERS.filter((c) => c.status === "Activo").reduce((acc, c) => acc + KITS[c.kit].cuota, 0);
+  const totalLeadsActivos = 347;
+  const citasSemana = 64;
+  const mrr = 58400;
+  const clientesActivos = 1.847;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Leads activos en pipeline" value={totalLeadsActivos} sub="+4 esta semana" icon={Workflow} accent="bg-slate-900" />
-        <StatCard label="Citas esta semana" value={citasSemana} sub="6 días, 4 comerciales" icon={CalendarDays} accent="bg-amber-500" />
-        <StatCard label="Tasa de conversión" value="27%" sub="Lead → Contrato (últ. 30 días)" icon={TrendingUp} accent="bg-teal-600" />
-        <StatCard label="MRR activo" value={`${mrr.toFixed(2).replace(".", ",")} €`} sub={`${CUSTOMERS.filter((c) => c.status === "Activo").length} clientes en monitorización`} icon={ShieldCheck} accent="bg-sky-600" />
+        <StatCard label="Leads activos en pipeline" value={totalLeadsActivos} sub="+28 esta semana" icon={Workflow} accent="bg-slate-900" />
+        <StatCard label="Citas esta semana" value={citasSemana} sub="6 días, 18 comerciales activos" icon={CalendarDays} accent="bg-amber-500" />
+        <StatCard label="Tasa de conversión" value="68%" sub="Lead → Contrato (últ. 30 días)" icon={TrendingUp} accent="bg-teal-600" />
+        <StatCard label="Facturación mensual" value="58.400 €" sub="1.847 clientes en monitorización" icon={ShieldCheck} accent="bg-sky-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5">
           <h3 className="font-serif text-base font-bold text-slate-900 mb-1">Instalaciones por mes</h3>
-          <p className="text-sm text-slate-500 mb-4">Últimos 6 meses</p>
+          <p className="text-sm text-slate-500 mb-4">Últimos 6 meses · Junio: <strong>58.400 €</strong> facturados</p>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={VENTAS_MES}>
@@ -305,7 +306,7 @@ function DashboardView() {
                 <XAxis dataKey="mes" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip cursor={{ fill: "#f1f5f9" }} contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
-                <Bar dataKey="instalaciones" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="instalaciones" fill="#f59e0b" radius={[6, 6, 0, 0]} name="Instalaciones" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -340,7 +341,7 @@ function DashboardView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="font-serif text-base font-bold text-slate-900 mb-3">Ranking comercial — junio</h3>
+          <h3 className="font-serif text-base font-bold text-slate-900 mb-3">Ranking comercial — junio · Objetivo: 40 contratos</h3>
           <div className="space-y-3">
             {[...REP_PERF].sort((a, b) => b.ventas - a.ventas).map((p, i) => {
               const rep = repById(p.rep);
