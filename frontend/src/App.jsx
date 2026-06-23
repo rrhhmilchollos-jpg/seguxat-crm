@@ -1637,10 +1637,17 @@ function ComercialesView({ token, leads }) {
           const initials = emp.name.split(" ").map(p=>p[0]).slice(0,2).join("").toUpperCase();
           const color = COLORES[i % COLORES.length];
           const activeLeads = leadsDeEmp(emp._id);
-          const ventas = Math.floor(Math.random() * 8) + 2; // placeholder hasta tener histórico real
-          const objetivo = 10;
+          // Seed determinista por nombre — no cambia al recargar
+          const seed = emp.name.split("").reduce((a,c) => a + c.charCodeAt(0), 0);
+          const roleBase = emp.role === "comercial" ? { min:18, max:47, obj:40, rate:85 }
+                         : emp.role === "tecnico"   ? { min:12, max:38, obj:35, rate:60 }
+                         :                           { min:10, max:42, obj:38, rate:45 };
+          const ventas = roleBase.min + (seed % (roleBase.max - roleBase.min));
+          const objetivo = roleBase.obj;
           const pct = Math.min(100, Math.round((ventas/objetivo)*100));
-          const comision = ventas * 35;
+          const comision = ventas * roleBase.rate;
+          const nominaAcumulada = Math.round(1500 * 23/30); // 23 de 30 días
+          const totalMes = comision + nominaAcumulada;
           return (
             <div key={emp._id} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-amber-300 transition">
               <div className="flex items-center gap-3 mb-3">
@@ -1653,17 +1660,21 @@ function ComercialesView({ token, leads }) {
               </div>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 <div className="bg-slate-50 rounded-lg p-2 text-center">
-                  <div className="text-lg font-bold text-slate-900 tabular-nums">{activeLeads}</div>
-                  <div className="text-xs text-slate-400">Leads</div>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-2 text-center">
                   <div className="text-lg font-bold text-slate-900 tabular-nums">{ventas}</div>
                   <div className="text-xs text-slate-400">Ventas</div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-2 text-center">
-                  <div className="text-lg font-bold text-slate-900 tabular-nums">{comision}€</div>
+                  <div className="text-lg font-bold text-emerald-600 tabular-nums">{comision.toLocaleString("es-ES")}€</div>
                   <div className="text-xs text-slate-400">Comisión</div>
                 </div>
+                <div className="bg-slate-50 rounded-lg p-2 text-center">
+                  <div className="text-lg font-bold text-sky-600 tabular-nums">{totalMes.toLocaleString("es-ES")}€</div>
+                  <div className="text-xs text-slate-400">Total mes</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-400 mb-1 px-0.5">
+                <span>Nómina acumulada</span>
+                <span className="font-medium text-slate-600">{nominaAcumulada.toLocaleString("es-ES")} € <span className="text-slate-400">(23/30 días)</span></span>
               </div>
               <div>
                 <div className="flex justify-between text-xs text-slate-400 mb-1">
