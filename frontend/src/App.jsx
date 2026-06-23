@@ -133,14 +133,64 @@ const INITIAL_LEADS = [
 ];
 
 const CUSTOMERS = [
-  { id: 1, name: "Mari Carmen Soriano", zone: "Ruzafa, Valencia", kit: "total", since: "03/2026", status: "Activo", next: "Revisión 09/2026", rep: "r2" },
-  { id: 2, name: "Antonio Belda", zone: "Benimaclet, Valencia", kit: "esencial", since: "01/2026", status: "Activo", next: "Revisión 07/2026", rep: "r3" },
-  { id: 3, name: "Restaurante La Pepica", zone: "Cabanyal, Valencia", kit: "negocio", since: "11/2025", status: "Activo", next: "Revisión 11/2026", rep: "r2" },
-  { id: 4, name: "Encarna Tortosa", zone: "Patraix, Valencia", kit: "esencial", since: "02/2026", status: "Pendiente instalación", next: "Instalación 18/06", rep: "r4" },
-  { id: 5, name: "Familia Gironés", zone: "Algirós, Valencia", kit: "total", since: "05/2026", status: "Activo", next: "Revisión 11/2026", rep: "r3" },
-  { id: 6, name: "Ferretería Casanova", zone: "Eixample, Valencia", kit: "negocio", since: "04/2026", status: "Activo", next: "Revisión 10/2026", rep: "r2" },
-  { id: 7, name: "Lola Ferrandis", zone: "Benimaclet, Valencia", kit: "total", since: "06/2026", status: "Pendiente instalación", next: "Instalación 19/06", rep: "r3" },
-  { id: 8, name: "Manuel Peris", zone: "Jesús, Valencia", kit: "esencial", since: "12/2025", status: "Activo", next: "Revisión 12/2026", rep: "r4" },
+  // Valencia Capital — Activos
+  { id:1, name:"Mari Carmen Soriano", zone:"Ruzafa, Valencia", kit:"total", since:"03/2026", status:"Activo", next:"Revisión 09/2026", rep:"r2" },
+  { id:2, name:"Antonio Belda Roig", zone:"Benimaclet, Valencia", kit:"esencial", since:"01/2026", status:"Activo", next:"Revisión 07/2026", rep:"r3" },
+  { id:3, name:"Restaurante La Pepica S.L.", zone:"Cabanyal, Valencia", kit:"negocio", since:"11/2025", status:"Activo", next:"Revisión 11/2026", rep:"r2" },
+  { id:4, name:"Encarna Tortosa Gil", zone:"Patraix, Valencia", kit:"esencial", since:"02/2026", status:"Activo", next:"Revisión 08/2026", rep:"r4" },
+  { id:5, name:"Familia Gironés Pla", zone:"Algirós, Valencia", kit:"total", since:"05/2026", status:"Activo", next:"Revisión 11/2026", rep:"r3" },
+  { id:6, name:"Ferretería Casanova S.L.", zone:"Eixample, Valencia", kit:"negocio", since:"04/2026", status:"Activo", next:"Revisión 10/2026", rep:"r2" },
+  { id:7, name:"Lola Ferrandis Bou", zone:"Benimaclet, Valencia", kit:"total", since:"06/2026", status:"Activo", next:"Revisión 12/2026", rep:"r3" },
+  { id:8, name:"Manuel Peris Gómez", zone:"Jesús, Valencia", kit:"esencial", since:"12/2025", status:"Activo", next:"Revisión 12/2026", rep:"r4" },
+  { id:9, name:"Clínica Dental Roig", zone:"Eixample, Valencia", kit:"negocio", since:"09/2025", status:"Activo", next:"Revisión 09/2026", rep:"r1" },
+  { id:10, name:"Amparo Iborra Cano", zone:"Pla del Real, Valencia", kit:"esencial", since:"10/2025", status:"Activo", next:"Revisión 10/2026", rep:"r2" },
+  { id:11, name:"Notaría Fontana & Gil", zone:"Eixample, Valencia", kit:"negocio", since:"08/2025", status:"Activo", next:"Revisión 08/2026", rep:"r1" },
+  { id:12, name:"Café Bar El Carmen", zone:"El Carmen, Valencia", kit:"negocio", since:"07/2025", status:"Activo", next:"Revisión 07/2026", rep:"r2" },
+  { id:13, name:"Josefa Valor Navarro", zone:"Benimaclet, Valencia", kit:"esencial", since:"06/2025", status:"Activo", next:"Revisión 06/2026", rep:"r3" },
+  { id:14, name:"Autoescuela Vial Sur", zone:"Jesús, Valencia", kit:"negocio", since:"05/2025", status:"Activo", next:"Revisión 05/2026", rep:"r4" },
+  { id:15, name:"Concha Villalba Pérez", zone:"Patraix, Valencia", kit:"total", since:"04/2025", status:"Activo", next:"Revisión 10/2026", rep:"r1" },
+  { id:16, name:"Inmobiliaria Levante S.L.", zone:"Centro, Valencia", kit:"negocio", since:"03/2025", status:"Activo", next:"Revisión 09/2026", rep:"r2" },
+  { id:17, name:"Rosa Gómez Andrés", zone:"Malilla, Valencia", kit:"esencial", since:"02/2025", status:"Activo", next:"Revisión 08/2026", rep:"r3" },
+  { id:18, name:"Taller Mecánico Gómez", zone:"Quatre Carreres, Valencia", kit:"negocio", since:"01/2025", status:"Activo", next:"Revisión 07/2026", rep:"r4" },
+  { id:19, name:"Heladería La Palma", zone:"Cabanyal, Valencia", kit:"negocio", since:"12/2024", status:"Activo", next:"Revisión 12/2026", rep:"r1" },
+  { id:20, name:"Cristina Mas Villalba", zone:"Pla del Real, Valencia", kit:"total", since:"11/2024", status:"Activo", next:"Revisión 11/2026", rep:"r2" },
+  { id:21, name:"Gimnasio Pulso S.L.", zone:"Algirós, Valencia", kit:"negocio", since:"10/2024", status:"Activo", next:"Revisión 10/2026", rep:"r3" },
+  { id:22, name:"Dolors Puig Mira", zone:"Torrefiel, Valencia", kit:"esencial", since:"09/2024", status:"Activo", next:"Revisión 09/2026", rep:"r4" },
+  { id:23, name:"Farmacia Soler C.B.", zone:"Eixample, Valencia", kit:"negocio", since:"08/2024", status:"Activo", next:"Revisión 08/2026", rep:"r1" },
+  { id:24, name:"Vicente Roig Palau", zone:"Ciutat Vella, Valencia", kit:"esencial", since:"07/2024", status:"Activo", next:"Revisión 07/2026", rep:"r2" },
+  { id:25, name:"Centro Estética Mima", zone:"Eixample, Valencia", kit:"negocio", since:"06/2024", status:"Activo", next:"Revisión 06/2026", rep:"r3" },
+  { id:26, name:"Bernardo Llopis Mas", zone:"Patraix, Valencia", kit:"total", since:"05/2024", status:"Activo", next:"Revisión 11/2026", rep:"r4" },
+  { id:27, name:"Lucía Martínez Olmos", zone:"Benimaclet, Valencia", kit:"esencial", since:"04/2024", status:"Activo", next:"Revisión 10/2026", rep:"r1" },
+  { id:28, name:"Gestoría Fiscal Mas", zone:"Centro, Valencia", kit:"negocio", since:"03/2024", status:"Activo", next:"Revisión 09/2026", rep:"r2" },
+  { id:29, name:"Óptica ClarVis S.L.", zone:"Eixample, Valencia", kit:"negocio", since:"02/2024", status:"Activo", next:"Revisión 08/2026", rep:"r3" },
+  { id:30, name:"Remedios Mas Puig", zone:"Malilla, Valencia", kit:"esencial", since:"01/2024", status:"Activo", next:"Revisión 07/2026", rep:"r4" },
+  { id:31, name:"Residencia 3ª Edad Sol", zone:"Campanar, Valencia", kit:"negocio", since:"12/2023", status:"Activo", next:"Revisión 12/2026", rep:"r1" },
+  { id:32, name:"Florería La Rosa", zone:"Campanar, Valencia", kit:"esencial", since:"11/2023", status:"Activo", next:"Revisión 11/2026", rep:"r2" },
+  { id:33, name:"Academia Idiomas Plus", zone:"Algirós, Valencia", kit:"negocio", since:"10/2023", status:"Activo", next:"Revisión 10/2026", rep:"r3" },
+  { id:34, name:"Panadería Artesana Forn", zone:"Cabanyal, Valencia", kit:"negocio", since:"09/2023", status:"Activo", next:"Revisión 09/2026", rep:"r4" },
+  { id:35, name:"Silvia Climent Boix", zone:"Xàtiva, Valencia", kit:"esencial", since:"08/2023", status:"Activo", next:"Revisión 08/2026", rep:"r1" },
+  { id:36, name:"Centro Yoga Calm", zone:"Ruzafa, Valencia", kit:"negocio", since:"07/2023", status:"Activo", next:"Revisión 07/2026", rep:"r2" },
+  { id:37, name:"Restaurante Cal Pep", zone:"Cabanyal, Valencia", kit:"negocio", since:"06/2023", status:"Activo", next:"Revisión 06/2026", rep:"r3" },
+  { id:38, name:"Amparo Crespo Lull", zone:"Campanar, Valencia", kit:"esencial", since:"05/2023", status:"Activo", next:"Revisión 05/2026", rep:"r4" },
+  { id:39, name:"Concesionario AutoVal", zone:"Quatre Carreres, Valencia", kit:"negocio", since:"04/2023", status:"Activo", next:"Revisión 04/2026", rep:"r1" },
+  { id:40, name:"Joyería Brillo S.L.", zone:"Centro, Valencia", kit:"negocio", since:"03/2023", status:"Activo", next:"Revisión 09/2026", rep:"r2" },
+  { id:41, name:"Petra Monfort Crespo", zone:"Pla del Real, Valencia", kit:"total", since:"02/2023", status:"Activo", next:"Revisión 08/2026", rep:"r3" },
+  { id:42, name:"Blanca Ortiz Reig", zone:"Xàtiva, Valencia", kit:"total", since:"01/2023", status:"Activo", next:"Revisión 07/2026", rep:"r4" },
+  { id:43, name:"Galería Arte Mediterrà", zone:"Centro, Valencia", kit:"negocio", since:"12/2022", status:"Activo", next:"Revisión 12/2026", rep:"r1" },
+  { id:44, name:"Lavandería Express BCN", zone:"Jesús, Valencia", kit:"negocio", since:"11/2022", status:"Activo", next:"Revisión 11/2026", rep:"r2" },
+  { id:45, name:"Francisca Belda Ros", zone:"Ruzafa, Valencia", kit:"total", since:"10/2022", status:"Activo", next:"Revisión 10/2026", rep:"r3" },
+  { id:46, name:"Supermercado Día Express", zone:"Campanar, Valencia", kit:"negocio", since:"09/2022", status:"Activo", next:"Revisión 09/2026", rep:"r4" },
+  { id:47, name:"Estudio Arquitectura AG", zone:"Eixample, Valencia", kit:"negocio", since:"08/2022", status:"Activo", next:"Revisión 08/2026", rep:"r1" },
+  { id:48, name:"Miquel Borràs Sala", zone:"Benimaclet, Valencia", kit:"total", since:"07/2022", status:"Activo", next:"Revisión 07/2026", rep:"r2" },
+  { id:49, name:"Dentista Smile Clinic", zone:"Eixample, Valencia", kit:"negocio", since:"06/2022", status:"Activo", next:"Revisión 06/2026", rep:"r3" },
+  { id:50, name:"Agencia Viajes Levante", zone:"Quatre Carreres, Valencia", kit:"negocio", since:"05/2022", status:"Activo", next:"Revisión 05/2026", rep:"r4" },
+  // Pendientes instalación
+  { id:51, name:"Seguros Mediterráneo S.L.", zone:"Centro, Valencia", kit:"negocio", since:"06/2026", status:"Pendiente instalación", next:"Instalación 28/06", rep:"r1" },
+  { id:52, name:"Pilar Escrivà Roig", zone:"Pla del Real, Valencia", kit:"esencial", since:"06/2026", status:"Pendiente instalación", next:"Instalación 27/06", rep:"r2" },
+  { id:53, name:"Bazar Todo a 1€ S.L.", zone:"Torrefiel, Valencia", kit:"negocio", since:"06/2026", status:"Pendiente instalación", next:"Instalación 26/06", rep:"r3" },
+  // Suspendidos
+  { id:54, name:"Bar El Rincón", zone:"Ruzafa, Valencia", kit:"negocio", since:"03/2025", status:"Suspendido", next:"Pendiente renovación", rep:"r2" },
+  { id:55, name:"Papelería El Libro", zone:"Benimaclet, Valencia", kit:"esencial", since:"08/2024", status:"Suspendido", next:"Pendiente renovación", rep:"r3" },
 ];
 
 const VENTAS_MES = [
@@ -1309,45 +1359,111 @@ function AgendaView({ currentUser, instalaciones, setInstalaciones, leads, token
 
 function ClientesView() {
   const [search, setSearch] = useState("");
-  const filtered = CUSTOMERS.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) || c.zone.toLowerCase().includes(search.toLowerCase())
-  );
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [filtroKit, setFiltroKit] = useState("todos");
+
+  const filtered = CUSTOMERS.filter(c => {
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.zone.toLowerCase().includes(search.toLowerCase());
+    const matchEstado = filtroEstado === "todos" || c.status === filtroEstado;
+    const matchKit = filtroKit === "todos" || c.kit === filtroKit;
+    return matchSearch && matchEstado && matchKit;
+  });
+
+  const activos = CUSTOMERS.filter(c => c.status === "Activo").length;
+  const pendientes = CUSTOMERS.filter(c => c.status === "Pendiente instalación").length;
+  const suspendidos = CUSTOMERS.filter(c => c.status === "Suspendido").length;
+  const mrrTotal = CUSTOMERS.filter(c => c.status === "Activo").reduce((acc,c) => acc + (KITS[c.kit]?.cuota||0), 0);
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200">
-      <div className="p-4 border-b border-slate-100 flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente o zona..."
-            className="w-full border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-        </div>
-        <span className="text-sm text-slate-500 ml-auto">{filtered.length} clientes</span>
+    <div className="space-y-4">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label:"Clientes activos", val: activos.toLocaleString("es-ES"), sub:"en monitorización 24/7", color:"text-emerald-600", bg:"bg-emerald-50" },
+          { label:"MRR cartera", val: mrrTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,".") + " €", sub:"ingresos recurrentes/mes", color:"text-sky-600", bg:"bg-sky-50" },
+          { label:"Pendiente instalación", val: pendientes, sub:"a programar esta semana", color:"text-amber-600", bg:"bg-amber-50" },
+          { label:"Suspendidos", val: suspendidos, sub:"requieren seguimiento", color:"text-rose-600", bg:"bg-rose-50" },
+        ].map((k,i) => (
+          <div key={i} className={`${k.bg} rounded-xl p-4`}>
+            <div className={`text-2xl font-bold tabular-nums ${k.color}`}>{k.val}</div>
+            <div className="text-xs text-slate-500 font-medium mt-0.5">{k.label}</div>
+            <div className="text-xs text-slate-400 mt-0.5">{k.sub}</div>
+          </div>
+        ))}
       </div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
-            <th className="px-4 py-2 font-medium">Cliente</th>
-            <th className="px-4 py-2 font-medium">Zona</th>
-            <th className="px-4 py-2 font-medium">Plan</th>
-            <th className="px-4 py-2 font-medium">Cliente desde</th>
-            <th className="px-4 py-2 font-medium">Estado</th>
-            <th className="px-4 py-2 font-medium">Próximo evento</th>
-            <th className="px-4 py-2 font-medium">Comercial</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((c) => (
-            <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50">
-              <td className="px-4 py-3 font-medium text-slate-900">{c.name}</td>
-              <td className="px-4 py-3 text-slate-500">{c.zone}</td>
-              <td className="px-4 py-3 text-slate-700">{KITS[c.kit].name}</td>
-              <td className="px-4 py-3 text-slate-500 tabular-nums">{c.since}</td>
-              <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-              <td className="px-4 py-3 text-slate-500">{c.next}</td>
-              <td className="px-4 py-3"><Avatar rep={repById(c.rep)} size="w-6 h-6" /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+
+      {/* Tabla */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-48">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente, zona..."
+              className="w-full border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+          <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <option value="todos">Todos los estados</option>
+            <option value="Activo">Activo</option>
+            <option value="Pendiente instalación">Pendiente instalación</option>
+            <option value="Suspendido">Suspendido</option>
+          </select>
+          <select value={filtroKit} onChange={e => setFiltroKit(e.target.value)}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <option value="todos">Todos los planes</option>
+            <option value="esencial">Hogar Esencial</option>
+            <option value="total">Hogar Total</option>
+            <option value="negocio">Negocio</option>
+          </select>
+          <span className="text-sm text-slate-400 ml-auto">{filtered.length} de {CUSTOMERS.length} clientes</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-slate-400 uppercase tracking-wide bg-slate-50">
+                <th className="px-4 py-3 font-medium">Cliente</th>
+                <th className="px-4 py-3 font-medium">Zona</th>
+                <th className="px-4 py-3 font-medium">Plan</th>
+                <th className="px-4 py-3 font-medium">Desde</th>
+                <th className="px-4 py-3 font-medium">Cuota</th>
+                <th className="px-4 py-3 font-medium">Estado</th>
+                <th className="px-4 py-3 font-medium">Próximo evento</th>
+                <th className="px-4 py-3 font-medium">Comercial</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(c => {
+                const rep = repById(c.rep);
+                const kitData = KITS[c.kit];
+                const isBiz = c.kit === "negocio";
+                return (
+                  <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50 transition">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {isBiz && <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                        <span className="font-medium text-slate-900">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{c.zone}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.kit==="negocio"?"bg-violet-100 text-violet-700":c.kit==="total"?"bg-sky-100 text-sky-700":"bg-slate-100 text-slate-600"}`}>
+                        {kitData?.name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-xs tabular-nums">{c.since}</td>
+                    <td className="px-4 py-3 text-slate-700 text-xs font-medium tabular-nums">{kitData?.cuota.toFixed(2).replace(".",",")} €/mes</td>
+                    <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{c.next}</td>
+                    <td className="px-4 py-3"><Avatar rep={rep} size="w-6 h-6" /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {filtered.length === 0 && (
+            <div className="text-center text-slate-400 text-sm py-12">No hay clientes con los filtros actuales.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1424,7 +1540,7 @@ function CatalogoView() {
       id: "active", name: "Sentinel Active", precio: 149, cuota: 12.90,
       img: "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=400&q=80",
       color: "from-emerald-600 to-emerald-900",
-      features: ["GPS + Galileo de alta precisión","Botón SOS triple · llamada + SMS + CRA","ECG y SpO2 en tiempo real","Detección caída automática","Batería 7 días","Pantalla AMOLED 1.5"","Logo Seguxat grabado en acero"],
+      features: ["GPS + Galileo de alta precisión","Botón SOS triple · llamada + SMS + CRA","ECG y SpO2 en tiempo real","Detección caída automática","Batería 7 días","Pantalla AMOLED 1.5 pulgadas","Logo Seguxat grabado en acero"],
       desc: "El smartwatch de seguridad más avanzado del mercado. Para quien no acepta compromisos.",
       badge: "Premium 2026",
     },
