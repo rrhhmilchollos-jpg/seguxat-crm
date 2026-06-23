@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://crm.seguxat.es/sitemap.xml
