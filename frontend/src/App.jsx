@@ -503,29 +503,28 @@ function LeadPanel({ lead, onClose, onMove }) {
   );
 }
 
-function PipelineView({ leads, setLeads }) {
+function PipelineView({ leads, setLeads, loading, token, moveLeadStage, createLead, currentUser }) {
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
   function moveStage(id, dir) {
-    setLeads((prev) => prev.map((l) => {
-      if (l.id !== id) return l;
-      const idx = STAGES.findIndex((s) => s.id === l.stage);
-      const newIdx = Math.min(STAGES.length - 1, Math.max(0, idx + dir));
-      return { ...l, stage: STAGES[newIdx].id, days: 0 };
-    }));
-    setSelected((sel) => sel && sel.id === id ? { ...sel, stage: STAGES[Math.min(STAGES.length - 1, Math.max(0, STAGES.findIndex((s) => s.id === sel.stage) + dir))].id, days: 0 } : sel);
+    const lead = leads.find(l => l.id === id);
+    if (!lead) return;
+    const idx = STAGES.findIndex((s) => s.id === lead.stage);
+    const newIdx = Math.min(STAGES.length - 1, Math.max(0, idx + dir));
+    const newStage = STAGES[newIdx].id;
+    moveLeadStage(id, newStage);
+    setSelected((sel) => sel && sel.id === id ? { ...sel, stage: newStage, days: 0 } : sel);
   }
 
   function addLead(form) {
-    const nextId = Math.max(...leads.map((l) => l.id)) + 1;
-    setLeads((prev) => [...prev, { id: nextId, ...form, stage: "nuevo", days: 0 }]);
+    createLead(form);
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-slate-500">{leads.length} leads en el embudo · pulsa una tarjeta para ver el detalle</p>
+        <p className="text-sm text-slate-500">{loading ? "Cargando leads..." : `${leads.length} leads en el embudo · pulsa una tarjeta para ver el detalle`}</p>
         <button onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-lg px-3 py-2">
           <Plus className="w-4 h-4" /> Nuevo lead
@@ -546,6 +545,7 @@ function PipelineView({ leads, setLeads }) {
                 {items.map((lead) => {
                   const rep = repById(lead.rep);
                   const isBusiness = lead.kit === "negocio";
+                  const initials = (lead.repName || "").split(" ").map(p=>p[0]).slice(0,2).join("").toUpperCase() || "?";
                   return (
                     <button key={lead.id} onClick={() => setSelected(lead)}
                       className="w-full text-left bg-white border border-slate-200 rounded-lg p-3 hover:border-amber-400 hover:shadow-sm transition">
@@ -555,8 +555,8 @@ function PipelineView({ leads, setLeads }) {
                       </div>
                       <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" />{lead.zone}</div>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs font-medium text-amber-600">{KITS[lead.kit].name}</span>
-                        <Avatar rep={rep} size="w-6 h-6" />
+                        <span className="text-xs font-medium text-amber-600">{KITS[lead.kit]?.name || lead.kit}</span>
+                        {rep ? <Avatar rep={rep} size="w-6 h-6" /> : <div className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center text-white text-[9px] font-bold">{initials}</div>}
                       </div>
                       {lead.cita && <div className="text-xs text-teal-600 mt-1.5 flex items-center gap-1"><Clock className="w-3 h-3" />{lead.cita}</div>}
                     </button>
@@ -2308,9 +2308,70 @@ export default function SeguxatCRM() {
   const [currentUser, setCurrentUser] = useState(null);
   const [token, setToken] = useState(null);
   const [active, setActive] = useState("dashboard");
-  // Estado global compartido entre Pipeline y Agenda
-  const [leads, setLeads] = useState(INITIAL_LEADS);
+  const [leads, setLeads] = useState([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
   const [instalaciones, setInstalaciones] = useState(INITIAL_INSTALACIONES);
+
+  // Cargar leads desde la API al hacer login
+  useEffect(() => {
+    if (!token) return;
+    setLeadsLoading(true);
+    fetch(`${API_BASE}/leads`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.leads) {
+          // Mapear formato API → formato frontend
+          const mapped = data.leads.map(l => ({
+            id: l._id,
+            name: l.name,
+            zone: l.zone,
+            phone: l.phone || "",
+            kit: l.kit,
+            source: l.source || "Web",
+            stage: l.stage,
+            days: 0,
+            cita: l.cita || null,
+            notes: l.notes || "",
+            rep: l.assignedTo?._id || l.assignedTo || "",
+            repName: l.assignedTo?.name || "",
+            repZone: l.assignedTo?.zone || "",
+          }));
+          setLeads(mapped);
+        }
+      })
+      .catch(() => setLeads(INITIAL_LEADS))
+      .finally(() => setLeadsLoading(false));
+  }, [token]);
+
+  // Mover stage en API y actualizar local
+  async function moveLeadStage(id, newStage) {
+    if (!token) return;
+    try {
+      await fetch(`${API_BASE}/leads/${id}/stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ stage: newStage }),
+      });
+    } catch {}
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, stage: newStage } : l));
+  }
+
+  // Crear lead en API
+  async function createLead(form) {
+    if (!token) { setLeads(prev => [...prev, { id: Date.now(), ...form, stage: "nuevo", days: 0 }]); return; }
+    try {
+      const res = await fetch(`${API_BASE}/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: form.name, zone: form.zone, phone: form.phone, kit: form.kit, source: form.source, assignedTo: form.rep }),
+      });
+      const data = await res.json();
+      if (data.lead) {
+        const l = data.lead;
+        setLeads(prev => [...prev, { id: l._id, name: l.name, zone: l.zone, phone: l.phone||"", kit: l.kit, source: l.source||"Web", stage: l.stage, days: 0, cita: null, rep: l.assignedTo || "" }]);
+      }
+    } catch { setLeads(prev => [...prev, { id: Date.now(), ...form, stage: "nuevo", days: 0 }]); }
+  }
 
   if (!currentUser) {
     return <LoginView onLogin={(employee, tok) => { setCurrentUser(employee); setToken(tok); }} />;
@@ -2321,8 +2382,8 @@ export default function SeguxatCRM() {
 
   const views = {
     dashboard: isDirector ? <DashboardView /> : <EmployeeDashboardView token={token} currentUser={currentUser} />,
-    pipeline: <PipelineView leads={leads} setLeads={setLeads} />,
-    agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} />,
+    pipeline: <PipelineView leads={leads} setLeads={setLeads} loading={leadsLoading} token={token} moveLeadStage={moveLeadStage} createLead={createLead} currentUser={currentUser} />,
+    agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} token={token} />,
     clientes: <ClientesView />,
     catalogo: <CatalogoView />,
     comerciales: <ComercialesView />,
