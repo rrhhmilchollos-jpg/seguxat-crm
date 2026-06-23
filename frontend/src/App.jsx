@@ -1357,7 +1357,7 @@ function AgendaView({ currentUser, instalaciones, setInstalaciones, leads, token
   );
 }
 
-function ClientesView() {
+function ClientesView({ instalaciones = [] }) {
   const [search, setSearch] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [filtroKit, setFiltroKit] = useState("todos");
@@ -1369,12 +1369,13 @@ function ClientesView() {
     return matchSearch && matchEstado && matchKit;
   });
 
-  // KPIs reales de Seguxat — 8.247 clientes activos en monitorización 24/7
+  // KPIs de Seguxat — activos y suspendidos fijos, pendientes se actualiza en tiempo real
   const activos = 8247;
-  const pendientes = 34;
+  // Pendientes = instalaciones confirmadas en Agenda que aún no están como "realizada"
+  // + base fija de 34 instalaciones en cola que no están en el sistema aún
+  const pendientesAgenda = instalaciones.filter(i => i.status === "pendiente" || i.status === "confirmada").length;
+  const pendientes = Math.max(34, 34 + pendientesAgenda);
   const suspendidos = 12;
-  // MRR: mix de kits — ~60% esencial(24,90) ~30% total(34,90) ~10% negocio(49,90)
-  // (8247 * 0.60 * 24.90) + (8247 * 0.30 * 34.90) + (8247 * 0.10 * 49.90) = ~249.800€
   const mrrTotal = 58400;
 
   return (
@@ -3165,7 +3166,7 @@ export default function SeguxatCRM() {
     pipeline: <PipelineView leads={leads} setLeads={setLeads} loading={leadsLoading} token={token} moveLeadStage={moveLeadStage} createLead={createLead} currentUser={currentUser}
       onGoToAgenda={(lead) => { setAgendaAutoLead(lead); setActive("agenda"); }} />,
     agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} token={token} autoLead={agendaAutoLead} clearAutoLead={() => setAgendaAutoLead(null)} />,
-    clientes: <ClientesView />,
+    clientes: <ClientesView instalaciones={instalaciones} />,
     catalogo: <CatalogoView />,
     pagos: <PagosView />,
     agente: <AgenteView leads={leads} instalaciones={instalaciones} token={token} />,
