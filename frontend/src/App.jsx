@@ -218,12 +218,83 @@ const REP_PERF = [
 ];
 
 // Técnicos instaladores con zonas de cobertura
+// Técnicos base — la disponibilidad se calcula dinámicamente por IA
+// "available" se sobreescribe en tiempo real desde /api/disponibilidad
 const TECHNICIANS = [
-  { id: "t1", name: "Carlos Mendoza", initials: "CM", zones: ["Patraix", "Jesús", "La Punta"], phone: "611 001 001", email: "carlos.mendoza@seguxat.es", color: "bg-emerald-600", available: true },
-  { id: "t2", name: "Rubén Palau", initials: "RP", zones: ["Ruzafa", "Eixample", "Gran Via"], phone: "611 001 002", email: "ruben.palau@seguxat.es", color: "bg-sky-600", available: true },
-  { id: "t3", name: "Adrián Valls", initials: "AV", zones: ["Benimaclet", "Algirós", "Pla del Real"], phone: "611 001 003", email: "adrian.valls@seguxat.es", color: "bg-violet-600", available: false },
-  { id: "t4", name: "Sergio Mora", initials: "SM", zones: ["Centro", "Ciutat Vella", "Cabanyal", "El Carmen"], phone: "611 001 004", email: "sergio.mora@seguxat.es", color: "bg-rose-600", available: true },
+  { id: "t1", name: "Carlos Mendoza", initials: "CM", zones: ["Patraix", "Jesús", "La Punta"], phone: "611 001 001", email: "carlos.mendoza@seguxat.es", color: "bg-emerald-600", available: true, group: "Instaladores Valencia Sur" },
+  { id: "t2", name: "Rubén Palau", initials: "RP", zones: ["Ruzafa", "Eixample", "Gran Via"], phone: "611 001 002", email: "ruben.palau@seguxat.es", color: "bg-sky-600", available: true, group: "Instaladores Valencia Centro" },
+  { id: "t3", name: "Adrián Valls", initials: "AV", zones: ["Benimaclet", "Algirós", "Pla del Real"], phone: "611 001 003", email: "adrian.valls@seguxat.es", color: "bg-violet-600", available: true, group: "Instaladores Valencia Norte" },
+  { id: "t4", name: "Sergio Mora", initials: "SM", zones: ["Centro", "Ciutat Vella", "Cabanyal", "El Carmen"], phone: "611 001 004", email: "sergio.mora@seguxat.es", color: "bg-rose-600", available: true, group: "Instaladores Valencia Centro" },
+  { id: "t5", name: "Jordi Pla", initials: "JP", zones: ["Campanar", "Benimamet", "Quatre Carreres"], phone: "611 001 005", email: "jordi.pla@seguxat.es", color: "bg-amber-600", available: true, group: "Instaladores Valencia Mar" },
+  { id: "t6", name: "Miquel Bas", initials: "MB", zones: ["Torrent", "Paiporta", "Silla"], phone: "611 001 006", email: "miquel.bas@seguxat.es", color: "bg-teal-600", available: true, group: "Instaladores Área Metro Sur" },
+  { id: "t7", name: "Tomàs Reig", initials: "TR", zones: ["Alzira", "Algemesí", "Carlet"], phone: "611 001 007", email: "tomas.reig@seguxat.es", color: "bg-indigo-600", available: true, group: "Instaladores Ribera Alta" },
+  { id: "t8", name: "Pau Giménez", initials: "PG", zones: ["Gandía", "Oliva", "La Safor"], phone: "611 001 008", email: "pau.gimenez@seguxat.es", color: "bg-pink-600", available: true, group: "Instaladores Gandía" },
+  { id: "t9", name: "Ferran Llopis", initials: "FL", zones: ["Xàtiva", "Ontinyent", "Canals"], phone: "611 001 009", email: "ferran.llopis@seguxat.es", color: "bg-orange-600", available: true, group: "Instaladores Xàtiva-Costera" },
+  { id: "t10", name: "Vicent Iborra", initials: "VI", zones: ["Castelló", "Borriana", "Vila-real"], phone: "611 001 010", email: "vicent.iborra@seguxat.es", color: "bg-cyan-600", available: true, group: "Instaladores Castelló" },
+  { id: "t11", name: "Àlex Comes", initials: "AC", zones: ["Alacant", "Benidorm", "Altea"], phone: "611 001 011", email: "alex.comes@seguxat.es", color: "bg-emerald-700", available: true, group: "Instaladores Alacant Nord" },
+  { id: "t12", name: "Bruno Cano", initials: "BC", zones: ["Elx", "Torrevieja", "Orihuela"], phone: "611 001 012", email: "bruno.cano@seguxat.es", color: "bg-violet-700", available: true, group: "Instaladores Alacant Sud" },
 ];
+
+// Hook para disponibilidad dinámica por IA
+function useTechDisponibilidad(token) {
+  const [disponibilidad, setDisponibilidad] = useState({});
+  
+  async function fetchDisponibilidad() {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/disponibilidad`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setDisponibilidad(data.disponibilidad || {});
+    } catch {}
+  }
+  
+  useEffect(() => {
+    fetchDisponibilidad();
+    // Actualizar cada 5 minutos
+    const interval = setInterval(fetchDisponibilidad, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [token]);
+  
+  return disponibilidad;
+}
+
+// Calcular disponibilidad local cuando no hay respuesta del backend
+function calcularDispLocal(techId, instalaciones) {
+  const hoy = new Date().toISOString().split("T")[0];
+  const horaActual = new Date().getHours() + new Date().getMinutes()/60;
+  const KIT_HORAS = { esencial: 2, total: 3, negocio: 4.5 };
+  
+  const instHoy = instalaciones.filter(i => 
+    i.techId === techId && i.date === hoy &&
+    (i.status === "confirmada" || i.status === "pendiente")
+  );
+  
+  if (instHoy.length === 0) return { available: true, reason: "Sin instalaciones hoy" };
+  
+  let ocupadoAhora = false;
+  let proximaLibre = null;
+  let horasOcupadas = 0;
+  
+  for (const inst of instHoy) {
+    const [h, m] = (inst.time || "09:00").split(":").map(Number);
+    const inicio = h + m/60;
+    const duracion = KIT_HORAS[inst.kit] || 2;
+    const fin = inicio + duracion;
+    horasOcupadas += duracion;
+    if (horaActual >= inicio && horaActual < fin) {
+      ocupadoAhora = true;
+      proximaLibre = `${String(Math.floor(fin)).padStart(2,"0")}:${String(Math.round((fin%1)*60)).padStart(2,"0")}h`;
+    }
+  }
+  
+  const horasLibres = Math.max(0, 12 - horasOcupadas);
+  return {
+    available: !ocupadoAhora && horasLibres >= 2,
+    reason: ocupadoAhora ? `En instalación hasta ${proximaLibre}` : horasLibres >= 2 ? `Libre — ${Math.floor(horasLibres)}h disponibles` : "Sin hueco hoy",
+    proximaLibre,
+    instalacionesHoy: instHoy.length,
+  };
+}
 
 // Coordinadoras con correo y color
 const COORDINATORS = [
@@ -675,14 +746,23 @@ function TechAvatar({ tech, size = "w-8 h-8" }) {
 }
 
 // Modal de asignación de cita de instalación
-function AsignarCitaModal({ lead, onClose, onConfirm }) {
+function AsignarCitaModal({ lead, onClose, onConfirm, instalaciones = [], token }) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("09:00");
   const [techId, setTechId] = useState("");
+  const [pairTechId, setPairTechId] = useState(""); // segundo técnico en pareja
+  const [pairMode, setPairMode] = useState(false);
   const [coordId, setCoordId] = useState("k1");
   const [clientPhone, setClientPhone] = useState(lead?.phone || "");
   const [clientEmail, setClientEmail] = useState("");
   const [step, setStep] = useState("form"); // form | confirm | sending | success
+  const disponibilidad = useTechDisponibilidad(token);
+  
+  // Calcular disponibilidad para cada técnico
+  function getTechDisp(id) {
+    if (disponibilidad[id]) return disponibilidad[id];
+    return calcularDispLocal(id, instalaciones);
+  }
 
   // Técnicos que cubren la zona del lead
   const zone = lead?.zone || "";
@@ -848,33 +928,56 @@ function AsignarCitaModal({ lead, onClose, onConfirm }) {
                           <div className="text-sm font-medium text-slate-900">{t.name}</div>
                           <div className="text-xs text-slate-500">{t.zones.join(" · ")}</div>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                          {t.available ? "Disponible" : "Ocupado"}
-                        </span>
+                        {(() => { const d = getTechDisp(t.id); return (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${d.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`} title={d.reason}>
+                            {d.available ? "🟢 Libre" : `🟡 ${d.proximaLibre ? `Libre ${d.proximaLibre}` : "Ocupado"}`}
+                          </span>
+                        ); })()}
                         {techId === t.id && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
+              {/* Opción pareja de técnicos */}
+              {techId && (
+                <div className="mt-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+                    <input type="checkbox" checked={pairMode} onChange={e => setPairMode(e.target.checked)} className="rounded" />
+                    Asignar en pareja (instalaciones complejas — reduce tiempo un 30%)
+                  </label>
+                  {pairMode && (
+                    <select value={pairTechId} onChange={e => setPairTechId(e.target.value)}
+                      className="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                      <option value="">— Selecciona el segundo técnico —</option>
+                      {TECHNICIANS.filter(t => t.id !== techId).map(t => {
+                        const d = getTechDisp(t.id);
+                        return <option key={t.id} value={t.id}>{t.name} · {d.available ? "🟢 Libre" : "🟡 Ocupado"} · {t.group}</option>;
+                      })}
+                    </select>
+                  )}
+                </div>
+              )}
               {otherTechs.length > 0 && (
                 <details className="mt-1">
                   <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600">Otros técnicos (fuera de zona)</summary>
                   <div className="space-y-2 mt-2">
-                    {otherTechs.map((t) => (
+                    {otherTechs.map((t) => {
+                      const d = getTechDisp(t.id);
+                      return (
                       <button key={t.id} onClick={() => setTechId(t.id)}
                         className={`w-full flex items-center gap-3 p-3 rounded-lg border transition ${techId === t.id ? "border-emerald-400 bg-emerald-50" : "border-slate-200 hover:border-slate-300 opacity-60"}`}>
                         <TechAvatar tech={t} />
                         <div className="flex-1 text-left">
                           <div className="text-sm font-medium text-slate-900">{t.name}</div>
-                          <div className="text-xs text-slate-500">{t.zones.join(" · ")}</div>
+                          <div className="text-xs text-slate-500">{t.zones.join(" · ")} · {t.group}</div>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                          {t.available ? "Disponible" : "Ocupado"}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${d.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`} title={d.reason}>
+                          {d.available ? "🟢 Libre" : `🟡 ${d.proximaLibre ? `Libre ${d.proximaLibre}` : "Ocupado"}`}
                         </span>
                         {techId === t.id && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
                       </button>
-                    ))}
+                    )})}
                   </div>
                 </details>
               )}
@@ -1351,7 +1454,7 @@ function AgendaView({ currentUser, instalaciones, setInstalaciones, leads, token
 
       {/* Modal de asignación */}
       {modalLead && (
-        <AsignarCitaModal lead={modalLead} onClose={() => setModalLead(null)} onConfirm={handleConfirm} />
+        <AsignarCitaModal lead={modalLead} onClose={() => setModalLead(null)} onConfirm={handleConfirm} instalaciones={instalaciones} token={token} />
       )}
     </div>
   );

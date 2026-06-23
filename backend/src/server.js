@@ -9,6 +9,7 @@ import leadRoutes from "./routes/leads.js";
 import customerRoutes from "./routes/customers.js";
 import instalacionRoutes from "./routes/instalaciones.js";
 import ariaRoutes from "./routes/aria.js";
+import disponibilidadRoutes from "./routes/disponibilidad.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/api/leads", leadRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/instalaciones", instalacionRoutes);
 app.use("/api/aria", ariaRoutes);
+app.use("/api/disponibilidad", disponibilidadRoutes);
 
 // Manejador de errores genérico
 app.use((err, _req, res, _next) => {
