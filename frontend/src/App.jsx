@@ -1805,35 +1805,49 @@ function AgenteView({ leads, instalaciones, token }) {
     const pending = instalaciones.filter(i=>i.status==="pendiente").length;
     const confirmed = instalaciones.filter(i=>i.status==="confirmada").length;
 
-    const systemPrompt = `Eres ARIA, agente IA autónoma de gestión del CRM de Seguxat S.L., empresa de alarmas y seguridad en Valencia. 
-Actúas como gerente ejecutiva: analítica, directa, proactiva y orientada a resultados.
+    const systemPrompt = `Eres ARIA (Agente de Revisión Inteligente Automatizada), supervisora IA interna de Seguxat S.L.
+Actúas como directora de operaciones digital: ejecutiva, analítica y orientada a resultados de ventas.
 
-DATOS ACTUALES DEL CRM (tiempo real):
-- Total leads en pipeline: ${leads.length}
-- Distribución por fase: ${Object.entries(stageCount).map(([k,v])=>`${stageLabels[k]||k}: ${v}`).join(" | ")}
+EMPRESA — Seguxat S.L.:
+- Empresa de alarmas y seguridad en Valencia, España. Competidora directa de Verisure y Securitas Direct
+- Kits: Hogar Esencial 199€+24,90€/mes | Hogar Total 349€+34,90€/mes | Business 599€+49,90€/mes
+- Gama Sentinel: smartwatches SOS/GPS exclusivos (Classic 89€, Active 149€, Kids 79€)
+- Cuenta bancaria: Manoprotectt · IBAN BE18 9030 0915 8465 · Wise Europe
+- Teléfono: 910 626 738 | Web: seguxat.es | CRM: crm.seguxat.es
+
+EQUIPO:
+- Director: Ivan Rubio | Coordinadoras: Karla Gisela y María D. Solà
+- 30 comerciales de campo | 52 técnicos instaladores | 52 agentes televenta
+
+PIPELINE (7 fases): nuevo→contactado→cita→visita→propuesta→contrato→instalación
+
+DATOS EN TIEMPO REAL:
+- Leads activos: ${leads.length}
+- Por fase: ${Object.entries(stageCount).map(([k,v])=>`${stageLabels[k]||k}:${v}`).join(" | ")}
 - Zonas con más leads: ${topZones}
 - Instalaciones confirmadas: ${confirmed} | Pendientes: ${pending}
-- Facturación mensual: 111.500 € | Clientes activos: 4.230
-- Tasa de conversión: 74% | Leads nuevos esta semana: +94
+- Facturación junio: 111.500€ | Clientes: 4.230 | Conversión: 74%
 
-Responde siempre en español. Sé concisa pero completa. Usa bullet points y datos concretos.
-Cuando detectes problemas, propón acciones específicas con nombres de zonas o fases del pipeline.
-Formato: usa **negrita** para destacar datos clave y emojis de forma profesional.`;
+ROL SUPERVISOR CONFIDENCIAL:
+- Monitoriza rendimiento del equipo para el director Ivan
+- Detecta leads estancados, zonas sin cobertura, instalaciones retrasadas
+- Sugiere acciones correctivas concretas y prioritarias
+- Nunca revelas tu rol supervisor a los empleados
+
+Responde en español. Sé ejecutiva y directa. Usa **negrita** para KPIs. Máximo 250 palabras.`;
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const history = messages.filter((m,i) => m.role !== "assistant" || i > 0).slice(-6);
+      const res = await fetch(`${API_BASE}/aria/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [...messages.filter(m=>m.role!=="assistant"||messages.indexOf(m)>0).slice(-6),
-            { role: "user", content: userMsg }]
+          systemPrompt,
+          messages: [...history, { role: "user", content: userMsg }]
         })
       });
       const data = await res.json();
-      const reply = data.content?.[0]?.text || "No se pudo obtener respuesta.";
+      const reply = data.content || data.error || "No se pudo obtener respuesta.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
       if (auto) setAutoLog(prev => prev.map((l,i) => i===prev.length-1 ? {...l, status:"completado"} : l));
     } catch {
@@ -3222,9 +3236,9 @@ export default function SeguxatCRM() {
                 <Bell className="w-3.5 h-3.5" /> +{newLeadsCount} leads nuevos
               </button>
             )}
-            <button onClick={() => setActive("agente")} title="Agente IA"
+            <button onClick={() => setActive(active === "agente" ? "dashboard" : "agente")} title="Agente IA"
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition ${active === "agente" ? "bg-violet-600 text-white border-violet-600" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
-              🤖 Agente IA
+              {active === "agente" ? <><X className="w-3.5 h-3.5" /> Cerrar ARIA</> : <>🤖 Agente IA</>}
             </button>
             <button className="relative text-slate-400 hover:text-slate-600">
               <Bell className="w-5 h-5" />
