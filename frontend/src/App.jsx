@@ -2909,13 +2909,16 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
+  const [sessionStats, setSessionStats] = useState({ tareasDone: 0, leadsAvanzados: 0, citasAgendadas: 0 });
+  const [showResumen, setShowResumen] = useState(false);
+  const [lastActivity, setLastActivity] = useState(null);
+
   const firstName = currentUser.name?.split(" ")[0] || "compañero/a";
   const roleLabel = ROLE_LABELS[currentUser.role] || currentUser.role;
-
   const hora = new Date().getHours();
-  const mes = new Date().getMonth(); // 5=jun, 6=jul, 7=ago
+  const mes = new Date().getMonth();
+  const esFinalDia = hora >= 18;
 
-  // Saludos divertidos que rotan según la hora
   const SALUDOS_MANANA = [
     `☀️ ¡Buenos días, ${firstName}! Hoy va a ser un gran día para cerrar contratos.`,
     `🌅 ¡Arriba, ${firstName}! El café está caliente y los leads esperan.`,
@@ -2933,18 +2936,16 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
     `🦉 Ey ${firstName}, los noctámbulos de Seguxat os lo currais mucho.`,
     `⭐ Tarde pero aquí estás, ${firstName}. Los mejores nunca paran.`,
   ];
-
-  // Frases de verano / temporada
   const VERANO_TIPS = mes >= 5 && mes <= 7 ? [
-    "🏖️ Recuerda: con el calor del verano, los clientes también quieren proteger sus hogares mientras están de vacaciones.",
+    "🏖️ Con el calor del verano, los clientes también quieren proteger sus hogares mientras están de vacaciones.",
     "☀️ Temporada alta para alarmas de segunda residencia — ¡aprovéchalo!",
-    "🌊 Muchos clientes se van de vacaciones este mes. Es el momento perfecto para ofrecerles tranquilidad.",
+    "🌊 Muchos clientes se van de vacaciones. Es el momento perfecto para ofrecerles tranquilidad.",
     "🏄 El verano mola, pero los ladrones también tienen vacaciones activas. ¡Cuéntaselo a tus leads!",
   ] : [];
 
   const allSaludos = hora < 12 ? SALUDOS_MANANA : hora < 20 ? SALUDOS_TARDE : SALUDOS_NOCHE;
   const saludo = allSaludos[new Date().getDate() % allSaludos.length];
-  const verano = VERANO_TIPS[new Date().getDate() % Math.max(VERANO_TIPS.length, 1)];
+  const verano = VERANO_TIPS.length > 0 ? VERANO_TIPS[new Date().getDate() % VERANO_TIPS.length] : null;
 
   async function load() {
     if (!token) { setLoading(false); return; }
@@ -2954,11 +2955,29 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
       setTasks(data.tasks || []);
     } catch {} finally { setLoading(false); }
   }
+
   useEffect(() => { load(); }, [token]);
+
+  // Auto-refresh tareas cada 30s
+  useEffect(() => {
+    const interval = setInterval(() => { if (token) load(); }, 30000);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  // Mostrar resumen final a partir de las 18h si hay actividad
+  useEffect(() => {
+    if (esFinalDia && sessionStats.tareasDone > 0) setShowResumen(true);
+  }, [esFinalDia, sessionStats.tareasDone]);
 
   async function toggleTask(task) {
     if (!token) return;
+    const wasUndone = !task.done;
     setTasks(prev => prev.map(t => t._id === task._id ? { ...t, done: !t.done } : t));
+    if (wasUndone) {
+      setSessionStats(prev => ({ ...prev, tareasDone: prev.tareasDone + 1 }));
+      setLastActivity(`✅ Tarea completada: "${task.title.slice(0, 40)}"`);
+      setTimeout(() => setLastActivity(null), 4000);
+    }
     await fetch(`${API_BASE}/employees/me/tasks/${task._id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -2969,10 +2988,10 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
   const pending = tasks.filter(t => !t.done);
   const done = tasks.filter(t => t.done);
   const pct = tasks.length > 0 ? Math.round((done.length / tasks.length) * 100) : 0;
-  const guide = ROLE_GUIDES[currentUser.role];
+
   const citasPendientes = instalaciones.filter(i => i.status === "pendiente").length;
   const confirmadas = instalaciones.filter(i => i.status === "confirmada").length;
-
+  const guide = ROLE_GUIDES[currentUser.role];
   const EMOJIS_ROLE = { comercial:"💼", televenta:"📞", tecnico:"🔧", soporte:"🎧", director:"🎯" };
   const emojiRole = EMOJIS_ROLE[currentUser.role] || "👤";
 
@@ -2984,10 +3003,54 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
     { id:"pagos", emoji:"💳", label:"Pagos" },
   ];
 
+  // Frases del resumen final divertidas según rendimiento
+  function getResumenFrase() {
+    const total = sessionStats.tareasDone;
+    if (total === 0) return { emoji:"😅", texto:`${firstName}, mañana será mejor. ¡Descansa bien!` };
+    if (total <= 2) return { emoji:"👍", texto:`No está mal, ${firstName}. Poco a poco se llega lejos.` };
+    if (total <= 5) return { emoji:"🔥", texto:`¡Buena jornada, ${firstName}! Sigues así y llegas al top.` };
+    return { emoji:"🏆", texto:`¡MÁQUINA, ${firstName}! Eso es lo que hace grande a Seguxat.` };
+  }
+
+  const resumenFrase = getResumenFrase();
+
   return (
     <div className="space-y-4 max-w-2xl">
 
-      {/* ── Saludo del día ─────────────────────────── */}
+      {/* ── Notificación de actividad reciente ─── */}
+      {lastActivity && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm text-emerald-700 flex items-center gap-2 animate-pulse">
+          <span>{lastActivity}</span>
+        </div>
+      )}
+
+      {/* ── Resumen final del día (≥18h con actividad) ─── */}
+      {showResumen && (
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-5 border border-amber-500/30">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-amber-400 text-xs font-bold uppercase tracking-wide">⭐ Resumen de tu jornada</span>
+            <button onClick={() => setShowResumen(false)} className="text-slate-500 hover:text-slate-300 text-xs">Cerrar</button>
+          </div>
+          <div className="text-4xl mb-2">{resumenFrase.emoji}</div>
+          <p className="text-white font-semibold text-base mb-4">{resumenFrase.texto}</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { val: sessionStats.tareasDone, label: "Tareas hechas", emoji: "✅" },
+              { val: confirmadas, label: "Citas confirmadas", emoji: "📅" },
+              { val: leads.length, label: "Leads activos", emoji: "📋" },
+            ].map((s,i) => (
+              <div key={i} className="bg-white/10 rounded-xl p-3 text-center">
+                <div className="text-xl mb-0.5">{s.emoji}</div>
+                <div className="text-2xl font-bold text-white tabular-nums">{s.val}</div>
+                <div className="text-xs text-slate-400">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-slate-500 text-xs mt-4 text-center">¡Hasta mañana, {firstName}! 👋</p>
+        </div>
+      )}
+
+      {/* ── Saludo del día ─── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-2xl shrink-0">{emojiRole}</div>
@@ -2999,8 +3062,6 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
             </p>
           </div>
         </div>
-
-        {/* Tip de verano */}
         {verano && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
             {verano}
@@ -3008,23 +3069,21 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
         )}
       </div>
 
-      {/* ── Mini stats ─────────────────────────────── */}
+      {/* ── Mini stats — se actualizan en tiempo real ─── */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-slate-900 tabular-nums">{leads.length || "—"}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Leads activos</div>
-        </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-amber-700 tabular-nums">{citasPendientes}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Citas pendientes</div>
-        </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-emerald-700 tabular-nums">{confirmadas}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Confirmadas ✓</div>
-        </div>
+        {[
+          { val: leads.length || "—", label: "Leads activos", color: "text-slate-900", bg: "bg-white", border: "border-slate-200" },
+          { val: citasPendientes, label: "Citas pendientes", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+          { val: confirmadas, label: "Confirmadas ✓", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+        ].map((k,i) => (
+          <div key={i} className={`${k.bg} border ${k.border} rounded-xl p-4 text-center transition-all duration-500`}>
+            <div className={`text-2xl font-bold tabular-nums ${k.color}`}>{k.val}</div>
+            <div className="text-xs text-slate-400 mt-0.5">{k.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* ── Accesos rápidos ────────────────────────── */}
+      {/* ── Accesos rápidos ─── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
         <p className="text-xs text-slate-400 font-medium mb-3">Ir a...</p>
         <div className="flex gap-2 flex-wrap">
@@ -3037,7 +3096,7 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
         </div>
       </div>
 
-      {/* ── Tareas del día ─────────────────────────── */}
+      {/* ── Tareas con progreso en tiempo real ─── */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -3048,7 +3107,12 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
             )}
           </div>
           {tasks.length > 0 && (
-            <span className="text-xs text-slate-400">{pct}% completado</span>
+            <div className="flex items-center gap-2">
+              <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{width:`${pct}%`}} />
+              </div>
+              <span className="text-xs text-slate-400">{pct}%</span>
+            </div>
           )}
         </div>
 
@@ -3067,20 +3131,28 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
             {[...pending, ...done].map(t => (
               <button key={t._id} onClick={() => toggleTask(t)}
                 className="w-full flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition text-left group">
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition ${t.done ? "bg-emerald-500 border-emerald-500" : "border-slate-300 group-hover:border-amber-400"}`}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${t.done ? "bg-emerald-500 border-emerald-500 scale-110" : "border-slate-300 group-hover:border-amber-400"}`}>
                   {t.done && <CheckCircle2 className="w-3 h-3 text-white" />}
                 </div>
                 <div className="flex-1">
-                  <div className={`text-sm font-medium ${t.done ? "text-slate-400 line-through" : "text-slate-900"}`}>{t.title}</div>
+                  <div className={`text-sm font-medium transition-all ${t.done ? "text-slate-400 line-through" : "text-slate-900"}`}>{t.title}</div>
                   {t.description && <div className="text-xs text-slate-400 mt-0.5">{t.description}</div>}
                 </div>
+                {t.done && <span className="text-xs text-emerald-500 shrink-0">+1 ✓</span>}
               </button>
             ))}
           </div>
         )}
+
+        {/* Motivacional si completa todo */}
+        {tasks.length > 0 && pending.length === 0 && (
+          <div className="px-5 py-4 bg-emerald-50 border-t border-emerald-100 text-center">
+            <p className="text-emerald-700 font-semibold text-sm">🎉 ¡Todo completado, {firstName}! Eres un crack.</p>
+          </div>
+        )}
       </div>
 
-      {/* ── Guía del rol — colapsable ──────────────── */}
+      {/* ── Guía del rol — colapsable ─── */}
       {guide && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <button onClick={() => setShowGuide(!showGuide)}
@@ -3108,14 +3180,20 @@ function EmployeeDashboardView({ token, currentUser, leads = [], instalaciones =
         </div>
       )}
 
-      {/* ── Mensaje del equipo ─────────────────────── */}
+      {/* ── Botón resumen manual ─── */}
+      {!showResumen && sessionStats.tareasDone > 0 && (
+        <button onClick={() => setShowResumen(true)}
+          className="w-full text-center text-xs text-slate-400 hover:text-slate-600 py-2 transition">
+          Ver resumen de mi jornada →
+        </button>
+      )}
+
+      {/* ── Mensaje del equipo ─── */}
       <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 p-5 flex items-center gap-4">
         <span className="text-3xl shrink-0">{mes >= 5 && mes <= 7 ? "🏖️" : "🛡️"}</span>
         <div>
           <div className="text-white text-sm font-semibold">
-            {mes >= 5 && mes <= 7
-              ? `¡Buen verano, ${firstName}! Seguxat no descansa ni en agosto.`
-              : `¡Gracias por tu trabajo, ${firstName}! 8.247 familias más seguras.`}
+            {mes >= 5 && mes <= 7 ? `¡Buen verano, ${firstName}! Seguxat no descansa ni en agosto.` : `¡Gracias por tu trabajo, ${firstName}! 8.247 familias más seguras.`}
           </div>
           <div className="text-slate-400 text-xs mt-0.5">— Equipo Seguxat Valencia 🧡</div>
         </div>
