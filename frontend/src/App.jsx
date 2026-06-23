@@ -182,11 +182,7 @@ const COORDINATORS = [
 ];
 
 // Instalaciones confirmadas (estado global compartido con Agenda)
-const INITIAL_INSTALACIONES = [
-  { id: "i1", leadName: "Encarna Tortosa", zone: "Patraix", kit: "esencial", techId: "t1", date: "2026-06-25", time: "09:00", coordinatorId: "k1", clientPhone: "612 345 099", clientEmail: "encarna@gmail.com", status: "confirmada", notified: true },
-  { id: "i2", leadName: "Lola Ferrandis", zone: "Benimaclet", kit: "total", techId: "t3", date: "2026-06-26", time: "10:30", coordinatorId: "k2", clientPhone: "612 345 016", clientEmail: "lola.f@gmail.com", status: "confirmada", notified: true },
-  { id: "i3", leadName: "Gimnasio Pulso", zone: "Algirós", kit: "negocio", techId: "t3", date: "2026-06-27", time: "11:00", coordinatorId: "k1", clientPhone: "612 345 015", clientEmail: "admin@gimnasiopulso.es", status: "pendiente", notified: false },
-];
+const INITIAL_INSTALACIONES = [];
 
 const AGENDA = [
   { day: "Lunes 16", items: [
@@ -507,8 +503,7 @@ function LeadPanel({ lead, onClose, onMove }) {
   );
 }
 
-function PipelineView() {
-  const [leads, setLeads] = useState(INITIAL_LEADS);
+function PipelineView({ leads, setLeads }) {
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -876,8 +871,7 @@ function AsignarCitaModal({ lead, onClose, onConfirm }) {
   );
 }
 
-function AgendaView({ currentUser }) {
-  const [instalaciones, setInstalaciones] = useState(INITIAL_INSTALACIONES);
+function AgendaView({ currentUser, instalaciones, setInstalaciones, leads }) {
   const [modalLead, setModalLead] = useState(null);
   const [filterTech, setFilterTech] = useState("all");
   const [filterCoord, setFilterCoord] = useState("all");
@@ -887,8 +881,8 @@ function AgendaView({ currentUser }) {
   const isCoordinadora = !!myCoord;
   const [viewMode, setViewMode] = useState(isCoordinadora ? "mias" : "semana"); // semana | tecnicos | coordinadoras | mias
 
-  // Leads en fase instalación = candidatos a asignar
-  const leadsInstalacion = INITIAL_LEADS.filter((l) => l.stage === "instalacion" || l.stage === "contrato");
+  // Leads en fase instalación/contrato = candidatos a asignar (desde estado global)
+  const leadsInstalacion = (leads || INITIAL_LEADS).filter((l) => l.stage === "instalacion" || l.stage === "contrato");
 
   function handleConfirm(data) {
     setInstalaciones((prev) => [...prev, { id: "i" + Date.now(), ...data }]);
@@ -2314,6 +2308,9 @@ export default function SeguxatCRM() {
   const [currentUser, setCurrentUser] = useState(null);
   const [token, setToken] = useState(null);
   const [active, setActive] = useState("dashboard");
+  // Estado global compartido entre Pipeline y Agenda
+  const [leads, setLeads] = useState(INITIAL_LEADS);
+  const [instalaciones, setInstalaciones] = useState(INITIAL_INSTALACIONES);
 
   if (!currentUser) {
     return <LoginView onLogin={(employee, tok) => { setCurrentUser(employee); setToken(tok); }} />;
@@ -2324,8 +2321,8 @@ export default function SeguxatCRM() {
 
   const views = {
     dashboard: isDirector ? <DashboardView /> : <EmployeeDashboardView token={token} currentUser={currentUser} />,
-    pipeline: <PipelineView />,
-    agenda: <AgendaView currentUser={currentUser} />,
+    pipeline: <PipelineView leads={leads} setLeads={setLeads} />,
+    agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} />,
     clientes: <ClientesView />,
     catalogo: <CatalogoView />,
     comerciales: <ComercialesView />,
