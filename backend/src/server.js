@@ -34,7 +34,27 @@ const PORT = process.env.PORT || 4000;
 
 connectDB()
   .then(() => {
-    app.listen(PORT, () => console.log(`[server] Seguxat CRM API escuchando en :${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`[server] Seguxat CRM API escuchando en :${PORT}`);
+
+      // ─── Informe diario ARIA → director a las 08:00 hora Madrid ──────────
+      import("./utils/email.js").then(({ sendAriaDailyReport }) => {
+        function scheduleDailyReport() {
+          const now = new Date();
+          const madrid = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
+          const next = new Date(madrid);
+          next.setHours(8, 0, 0, 0);
+          if (next <= madrid) next.setDate(next.getDate() + 1);
+          const msUntil = next - madrid;
+          console.log(`[aria] Informe diario programado en ${Math.round(msUntil/3600000)}h`);
+          setTimeout(() => {
+            sendAriaDailyReport();
+            setInterval(sendAriaDailyReport, 24 * 60 * 60 * 1000); // cada 24h
+          }, msUntil);
+        }
+        scheduleDailyReport();
+      }).catch(e => console.error("[aria] Error cron:", e.message));
+    });
   })
   .catch((err) => {
     console.error("[db] No se pudo conectar a MongoDB:", err.message);

@@ -67,3 +67,101 @@ export async function sendWelcomeEmail({ to, name, email, password, loginUrl }) 
 
   return { sent: true };
 }
+
+// ─── Alertas ARIA para el director ───────────────────────────────────────────
+
+const DIRECTOR_EMAIL = "rrhh.milchollos@gmail.com";
+const RESEND_API_KEY_VAL = process.env.RESEND_API_KEY;
+
+// Log en memoria para el informe diario
+const ariaErrorLog = [];
+
+export function logAriaError({ employeeName, employeeEmail, userMessage, errorType, timestamp }) {
+  ariaErrorLog.push({ employeeName, employeeEmail, userMessage, errorType, timestamp: timestamp || new Date().toISOString() });
+}
+
+export function getAriaErrorLog() { return [...ariaErrorLog]; }
+export function clearAriaErrorLog() { ariaErrorLog.length = 0; }
+
+// Email urgente al director cuando ARIA falla con un empleado
+export async function sendAriaUrgentAlert({ employeeName, employeeEmail, userMessage, errorType }) {
+  if (!RESEND_API_KEY_VAL) return;
+  const ts = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_API_KEY_VAL}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Seguxat CRM <onboarding@resend.dev>",
+        to: [DIRECTOR_EMAIL],
+        subject: `🚨 ARIA falló con ${employeeName} — Soporte urgente requerido`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:24px;border-radius:12px">
+            <div style="background:#ef4444;color:#fff;padding:12px 16px;border-radius:8px;margin-bottom:20px">
+              <strong>⚠️ ARIA — FALLO DETECTADO</strong> · ${ts}
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#94a3b8;width:160px">Empleado</td><td style="padding:8px 0;font-weight:bold">${employeeName}</td></tr>
+              <tr><td style="padding:8px 0;color:#94a3b8">Email</td><td style="padding:8px 0">${employeeEmail}</td></tr>
+              <tr><td style="padding:8px 0;color:#94a3b8">Tipo de error</td><td style="padding:8px 0;color:#fca5a5">${errorType}</td></tr>
+              <tr><td style="padding:8px 0;color:#94a3b8;vertical-align:top">Mensaje del empleado</td><td style="padding:8px 0;font-style:italic">"${userMessage}"</td></tr>
+            </table>
+            <div style="margin-top:20px;padding:12px;background:#1e293b;border-radius:8px;font-size:13px;color:#64748b">
+              ARIA respondió con fallback inteligente. El empleado no vio el error técnico.<br>
+              Accede al CRM para revisar: <a href="https://crm.seguxat.es" style="color:#6366f1">crm.seguxat.es</a>
+            </div>
+          </div>`,
+      }),
+    });
+  } catch (e) {
+    console.error("[email] Error enviando alerta ARIA:", e.message);
+  }
+}
+
+// Informe diario de errores ARIA — llamar con cron cada día a las 08:00
+export async function sendAriaDailyReport() {
+  if (!RESEND_API_KEY_VAL) return;
+  const errors = getAriaErrorLog();
+  const ts = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
+  const rows = errors.length === 0
+    ? "<tr><td colspan='4' style='padding:12px;text-align:center;color:#10b981'>✅ Sin errores en las últimas 24 horas</td></tr>"
+    : errors.map(e => `<tr style="border-bottom:1px solid #1e293b">
+        <td style="padding:8px">${new Date(e.timestamp).toLocaleTimeString("es-ES")}</td>
+        <td style="padding:8px">${e.employeeName}</td>
+        <td style="padding:8px;color:#fca5a5">${e.errorType}</td>
+        <td style="padding:8px;font-style:italic;max-width:200px;overflow:hidden">${e.userMessage?.slice(0,80)}...</td>
+      </tr>`).join("");
+
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_API_KEY_VAL}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Seguxat CRM <onboarding@resend.dev>",
+        to: [DIRECTOR_EMAIL],
+        subject: `📊 Informe diario ARIA — ${new Date().toLocaleDateString("es-ES")} · ${errors.length} incidencia(s)`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:24px;border-radius:12px">
+            <h2 style="color:#fff;margin-top:0">📊 Informe diario ARIA · ${ts}</h2>
+            <p style="color:#94a3b8">Resumen de incidencias del agente IA en las últimas 24 horas.</p>
+            <table style="width:100%;border-collapse:collapse;background:#1e293b;border-radius:8px;overflow:hidden">
+              <thead><tr style="background:#0f172a">
+                <th style="padding:10px;text-align:left;color:#64748b;font-size:12px">HORA</th>
+                <th style="padding:10px;text-align:left;color:#64748b;font-size:12px">EMPLEADO</th>
+                <th style="padding:10px;text-align:left;color:#64748b;font-size:12px">ERROR</th>
+                <th style="padding:10px;text-align:left;color:#64748b;font-size:12px">MENSAJE</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+            <div style="margin-top:16px;font-size:13px;color:#475569">
+              Total incidencias: <strong style="color:#fff">${errors.length}</strong> · 
+              <a href="https://crm.seguxat.es" style="color:#6366f1">Acceder al CRM</a>
+            </div>
+          </div>`,
+      }),
+    });
+    clearAriaErrorLog();
+  } catch (e) {
+    console.error("[email] Error enviando informe diario ARIA:", e.message);
+  }
+}
