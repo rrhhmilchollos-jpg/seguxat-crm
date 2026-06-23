@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "seed:director": "node --no-experimental-require-module scripts/seedDirector.js"
+    "seed:director": "node --no-experimental-require-module scripts/seedDirector.js",
+    "seed:masivo": "node scripts/seedMasivo.cjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
