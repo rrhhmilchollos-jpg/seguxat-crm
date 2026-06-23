@@ -144,12 +144,12 @@ const CUSTOMERS = [
 ];
 
 const VENTAS_MES = [
-  { mes: "Ene", instalaciones: 98, facturacion: 41200 },
-  { mes: "Feb", instalaciones: 112, facturacion: 47800 },
-  { mes: "Mar", instalaciones: 124, facturacion: 51300 },
-  { mes: "Abr", instalaciones: 138, facturacion: 54900 },
-  { mes: "May", instalaciones: 131, facturacion: 52700 },
-  { mes: "Jun", instalaciones: 147, facturacion: 58400 },
+  { mes: "Ene", instalaciones: 312, facturacion: 89400 },
+  { mes: "Feb", instalaciones: 287, facturacion: 82100 },
+  { mes: "Mar", instalaciones: 341, facturacion: 97600 },
+  { mes: "Abr", instalaciones: 398, facturacion: 114200 },
+  { mes: "May", instalaciones: 421, facturacion: 120800 },
+  { mes: "Jun", instalaciones: 389, facturacion: 111500 },
 ];
 
 const LEADS_ORIGEN = [
@@ -161,10 +161,10 @@ const LEADS_ORIGEN = [
 ];
 
 const REP_PERF = [
-  { rep: "r1", ventas: 38, objetivo: 35 },
-  { rep: "r2", ventas: 44, objetivo: 40 },
-  { rep: "r3", ventas: 41, objetivo: 40 },
-  { rep: "r4", ventas: 29, objetivo: 35 },
+  { rep: "r1", ventas: 87, objetivo: 80 },
+  { rep: "r2", ventas: 103, objetivo: 90 },
+  { rep: "r3", ventas: 94, objetivo: 90 },
+  { rep: "r4", ventas: 71, objetivo: 80 },
 ];
 
 // Técnicos instaladores con zonas de cobertura
@@ -289,16 +289,16 @@ function DashboardView() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Leads activos en citas" value="347" sub="+28 esta semana" icon={Workflow} accent="bg-slate-900" />
-        <StatCard label="Citas esta semana" value={citasSemana} sub="6 días, 18 comerciales activos" icon={CalendarDays} accent="bg-amber-500" />
-        <StatCard label="Tasa de conversión" value="68%" sub="Lead → Contrato (últ. 30 días)" icon={TrendingUp} accent="bg-teal-600" />
-        <StatCard label="Facturación mensual" value="58.400 €" sub="1.847 clientes en monitorización" icon={ShieldCheck} accent="bg-sky-600" />
+        <StatCard label="Leads activos en citas" value="1.284" sub="+94 esta semana" icon={Workflow} accent="bg-slate-900" />
+        <StatCard label="Citas esta semana" value="218" sub="6 días · 48 comerciales activos" icon={CalendarDays} accent="bg-amber-500" />
+        <StatCard label="Tasa de conversión" value="74%" sub="Lead → Contrato (últ. 30 días)" icon={TrendingUp} accent="bg-teal-600" />
+        <StatCard label="Facturación mensual" value="111.500 €" sub="4.230 clientes en monitorización" icon={ShieldCheck} accent="bg-sky-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5">
           <h3 className="font-serif text-base font-bold text-slate-900 mb-1">Instalaciones por mes</h3>
-          <p className="text-sm text-slate-500 mb-4">Últimos 6 meses · Junio: <strong>58.400 €</strong> facturados</p>
+          <p className="text-sm text-slate-500 mb-4">Últimos 6 meses · Junio: <strong>111.500 €</strong> facturados · Media anual: 102.600 €/mes</p>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={VENTAS_MES}>
@@ -341,7 +341,7 @@ function DashboardView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="font-serif text-base font-bold text-slate-900 mb-3">Ranking comercial — junio · Objetivo: 40 contratos</h3>
+          <h3 className="font-serif text-base font-bold text-slate-900 mb-3">Ranking comercial — junio · Objetivo: 90 contratos</h3>
           <div className="space-y-3">
             {[...REP_PERF].sort((a, b) => b.ventas - a.ventas).map((p, i) => {
               const rep = repById(p.rep);
