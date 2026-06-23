@@ -1354,125 +1354,283 @@ function ClientesView() {
 
 function CatalogoView() {
   const [tab, setTab] = useState("kits");
-  const [kit, setKit] = useState("total");
-  const [sentinel, setSentinel] = useState(null);
+  const [selectedKit, setSelectedKit] = useState("total");
   const [clientName, setClientName] = useState("");
   const [generated, setGenerated] = useState(false);
-  const selectedKit = KITS[kit];
 
   const TABS = [
-    { id: "kits", label: "Kits de alarma" },
-    { id: "sentinel", label: "Gama Sentinel" },
-    { id: "addons", label: "Complementos" },
+    { id: "kits", label: "🛡️ Kits de alarma" },
+    { id: "camaras", label: "📷 Cámaras HD" },
+    { id: "sentinel", label: "⌚ Sentinel Watch" },
+    { id: "central", label: "🖥️ Centrales y grabadoras" },
+    { id: "addons", label: "➕ Complementos" },
   ];
 
+  const KITS_PRO = [
+    {
+      id: "esencial",
+      name: "Hogar Esencial",
+      badge: null,
+      img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
+      precio: 199, cuota: 24.90,
+      desc: "Protección inteligente para pisos y apartamentos. Instalación en 2 horas.",
+      color: "from-slate-700 to-slate-900",
+      features: ["Central de alarma con batería 24h","2 sensores apertura puerta/ventana","1 detector movimiento PIR 10m","Sirena interior 110dB","App Seguxat iOS/Android","Monitorización CRA 24/7","Respuesta policial en 180s"],
+    },
+    {
+      id: "total",
+      name: "Hogar Total",
+      badge: "⭐ Más vendido",
+      img: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80",
+      precio: 349, cuota: 34.90,
+      desc: "La protección completa con videovigilancia HD y detección de humo.",
+      color: "from-amber-600 to-amber-800",
+      features: ["Todo lo de Esencial incluido","4 sensores apertura puerta/ventana","2 cámaras HD 2K interior/exterior","Sirena exterior autoalimentada flash","Detector humo y CO conectado","Videoverificación antes de avisar a policía","Clips de vídeo 30s ante cada alerta","Historial eventos 90 días en nube"],
+    },
+    {
+      id: "negocio",
+      name: "Seguxat Business",
+      badge: "🏢 Negocios",
+      img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80",
+      precio: 599, cuota: 49.90,
+      desc: "Seguridad empresarial con control de accesos y respuesta prioritaria.",
+      color: "from-violet-700 to-violet-900",
+      features: ["Central profesional multi-zona","Sensores perimetrales ilimitados","4 cámaras HD 4K con IA antifalsas alarmas","Botón pánico personal para empleados","Respuesta prioritaria CRA < 90 segundos","Control horario apertura/cierre negocio","Informes mensuales para el titular","Integración con cerradura electrónica"],
+    },
+  ];
+
+  const CAMARAS = [
+    { name: "Cámara Exterior Pro 4K", precio: 149, cuota: 4.90, img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&q=80", features: ["4K Ultra HD · 8MP","Visión nocturna 30m a color","Detección IA personas/vehículos","IP67 resistente intemperie","Ángulo 130°"], badge: "Nuevo 2026" },
+    { name: "Cámara Interior 360°", precio: 99, cuota: 2.90, img: "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?w=400&q=80", features: ["2K Full HD · 360° panorámica","Seguimiento automático movimiento","Audio bidireccional","Modo privacidad físico","Detección bebé/mascota"], badge: null },
+    { name: "Videoportero HD", precio: 199, cuota: 3.90, img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80", features: ["Pantalla táctil 7 pulgadas HD","Cámara gran angular 160°","Apertura remota desde app","Grabación visitantes 30 días","Compatible cerradura eléctrica"], badge: "Top ventas" },
+    { name: "Cámara Domo PTZ", precio: 249, cuota: 6.90, img: "https://images.unsplash.com/photo-1523474438810-b04a2480633c?w=400&q=80", features: ["Rotación 360° · Zoom 20x óptico","Seguimiento automático objetivos","4K con IR hasta 50m","Uso interior/exterior IP66","Ideal para negocios y locales"], badge: "Business" },
+  ];
+
+  const GRABADORAS = [
+    { name: "NVR Seguxat 8 canales", precio: 349, img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80", features: ["8 cámaras IP simultáneas","Disco duro 4TB incluido","Almacenamiento 30 días en local","Acceso remoto app y web","HDMI 4K para monitor"] },
+    { name: "NVR Pro 16 canales", precio: 549, img: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80", features: ["16 cámaras IP simultáneas","2x HDD 8TB RAID","IA detección facial integrada","Exportación USB encriptada","Ideal para grandes negocios"] },
+    { name: "Central Alarma Pro X1", precio: 299, img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80", features: ["32 zonas programables","Batería 72h autonomía","GSM + WiFi + LAN triple conexión","Teclado táctil retroiluminado","Compatible con todos los kits Seguxat"] },
+  ];
+
+  const SENTINEL_PRO = [
+    {
+      id: "classic", name: "Sentinel Classic", precio: 89, cuota: 9.90,
+      img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80",
+      color: "from-slate-600 to-slate-800",
+      features: ["GPS tiempo real","Botón SOS · llamada a CRA","Podómetro y frecuencia cardíaca","Batería 5 días","Resistente agua IP68","App familiar en tiempo real"],
+      desc: "Seguridad personal para adultos mayores y personas en riesgo.",
+    },
+    {
+      id: "active", name: "Sentinel Active", precio: 149, cuota: 12.90,
+      img: "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=400&q=80",
+      color: "from-emerald-600 to-emerald-900",
+      features: ["GPS + Galileo de alta precisión","Botón SOS triple · llamada + SMS + CRA","ECG y SpO2 en tiempo real","Detección caída automática","Batería 7 días","Pantalla AMOLED 1.5"","Logo Seguxat grabado en acero"],
+      desc: "El smartwatch de seguridad más avanzado del mercado. Para quien no acepta compromisos.",
+      badge: "Premium 2026",
+    },
+    {
+      id: "kids", name: "Sentinel Kids", precio: 79, cuota: 9.90,
+      img: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&q=80",
+      color: "from-sky-500 to-sky-800",
+      features: ["GPS en tiempo real para niños","Botón SOS directo a padres","Zona segura configurable (geovalla)","Chat de voz con padres","Resistente golpes y agua","Batería 4 días","Diseño divertido y ligero"],
+      desc: "Tranquilidad para padres. Libertad para niños.",
+    },
+  ];
+
+  const sk = KITS[selectedKit] || KITS.total;
+
   return (
-    <div className="space-y-6">
-      <div className="flex gap-1 border-b border-slate-200">
-        {TABS.map((t) => (
+    <div className="space-y-5">
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
+        {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition ${
-              tab === t.id ? "border-amber-500 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-            }`}>
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition whitespace-nowrap ${tab===t.id ? "border-amber-500 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"}`}>
             {t.label}
           </button>
         ))}
       </div>
 
+      {/* KITS */}
       {tab === "kits" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Object.entries(KITS).map(([k, v]) => (
-            <div key={k} className={`rounded-xl border p-5 ${kit === k ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white flex flex-col`}>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-serif text-lg font-bold text-slate-900">{v.name}</h3>
-                {kit === k && <CheckCircle2 className="w-5 h-5 text-amber-500" />}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {KITS_PRO.map(k => (
+            <div key={k.id} onClick={() => { setSelectedKit(k.id); setGenerated(false); }}
+              className={`rounded-2xl border overflow-hidden cursor-pointer transition hover:shadow-lg ${selectedKit===k.id ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white flex flex-col`}>
+              {/* Image */}
+              <div className={`h-44 bg-gradient-to-br ${k.color} relative overflow-hidden`}>
+                <img src={k.img} alt={k.name} className="w-full h-full object-cover opacity-30 mix-blend-luminosity" />
+                <div className="absolute inset-0 flex flex-col justify-end p-4">
+                  {k.badge && <span className="self-start text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold mb-2">{k.badge}</span>}
+                  <div className="text-white text-xl font-bold">{k.name}</div>
+                  <div className="text-white/70 text-xs mt-0.5">{k.desc}</div>
+                </div>
+                {selectedKit===k.id && <div className="absolute top-3 right-3 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-white" /></div>}
               </div>
-              <p className="text-sm text-slate-500 mb-4">{v.desc}</p>
-              <ul className="space-y-1.5 mb-4 flex-1">
-                {KIT_FEATURES[k].map((f, i) => (
-                  <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0 mt-0.5" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <div className="text-2xl font-serif font-bold text-slate-900 tabular-nums">{v.alta} €</div>
-              <div className="text-xs text-slate-400 mb-4">instalación · luego {v.cuota.toFixed(2).replace(".", ",")} €/mes</div>
-              <button onClick={() => { setKit(k); setGenerated(false); }}
-                className={`w-full rounded-lg py-2 text-sm font-medium ${kit === k ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
-                {kit === k ? "Seleccionado" : "Seleccionar"}
-              </button>
+              {/* Features */}
+              <div className="p-4 flex-1 flex flex-col">
+                <ul className="space-y-1.5 flex-1 mb-4">
+                  {k.features.map((f,i) => (
+                    <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-end justify-between mt-2">
+                  <div>
+                    <div className="text-2xl font-bold text-slate-900">{k.precio} €</div>
+                    <div className="text-xs text-slate-400">instalación · luego <strong>{k.cuota.toFixed(2).replace(".",",")} €/mes</strong></div>
+                  </div>
+                  <button className={`px-4 py-2 rounded-xl text-sm font-semibold ${selectedKit===k.id ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+                    {selectedKit===k.id ? "✓ Seleccionado" : "Seleccionar"}
+                  </button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* CÁMARAS */}
+      {tab === "camaras" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {CAMARAS.map((c,i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition flex flex-col">
+              <div className="h-40 overflow-hidden relative">
+                <img src={c.img} alt={c.name} className="w-full h-full object-cover" />
+                {c.badge && <span className="absolute top-2 left-2 text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold">{c.badge}</span>}
+              </div>
+              <div className="p-4 flex-1 flex flex-col">
+                <div className="font-bold text-slate-900 text-sm mb-2">{c.name}</div>
+                <ul className="space-y-1 flex-1 mb-3">
+                  {c.features.map((f,j) => <li key={j} className="text-xs text-slate-500 flex items-start gap-1"><span className="text-emerald-500 shrink-0">✓</span>{f}</li>)}
+                </ul>
+                <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
+                  <div>
+                    <div className="font-bold text-slate-900">{c.precio} €</div>
+                    <div className="text-xs text-slate-400">+{c.cuota.toFixed(2).replace(".",",")} €/mes</div>
+                  </div>
+                  <button className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-slate-700">Añadir</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* SENTINEL WATCH */}
       {tab === "sentinel" && (
         <div>
-          <p className="text-sm text-slate-500 mb-4">
-            La gama Sentinel son los relojes GPS con botón SOS exclusivos de Seguxat — un producto independiente de los kits de alarma, pensado para venderse solo o como complemento.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {SENTINEL_MODELS.map((s) => (
-              <div key={s.id} className={`rounded-xl border p-5 ${sentinel === s.id ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white flex flex-col`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-serif text-lg font-bold text-slate-900">{s.name}</h3>
-                  {sentinel === s.id && <CheckCircle2 className="w-5 h-5 text-amber-500" />}
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 mb-5 flex items-center gap-5">
+            <div className="flex-1">
+              <div className="text-xs text-amber-400 font-semibold uppercase tracking-widest mb-1">Exclusivo Seguxat 2026</div>
+              <div className="text-white text-2xl font-bold mb-1">Gama Sentinel Watch</div>
+              <div className="text-slate-400 text-sm">El único smartwatch de seguridad conectado directamente con nuestra Central Receptora de Alarmas. Más avanzado que cualquier producto Verisure o Securitas Direct.</div>
+            </div>
+            <img src="https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=200&q=80" alt="Sentinel" className="w-28 h-28 rounded-2xl object-cover shrink-0 border-2 border-amber-500/30" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {SENTINEL_PRO.map(s => (
+              <div key={s.id} className="rounded-2xl border border-slate-200 overflow-hidden bg-white hover:shadow-lg transition flex flex-col">
+                <div className={`h-48 bg-gradient-to-br ${s.color} relative overflow-hidden`}>
+                  <img src={s.img} alt={s.name} className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
+                  <div className="absolute inset-0 flex flex-col justify-end p-4">
+                    {s.badge && <span className="self-start text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold mb-2">{s.badge}</span>}
+                    <div className="text-white text-lg font-bold">{s.name}</div>
+                    <div className="text-white/70 text-xs mt-0.5">{s.desc}</div>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-500 mb-4">{s.desc}</p>
-                <ul className="space-y-1.5 mb-4 flex-1">
-                  {s.features.map((f, i) => (
-                    <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0 mt-0.5" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <div className="text-2xl font-serif font-bold text-slate-900 tabular-nums">{s.price} €</div>
-                <div className="text-xs text-slate-400 mb-4">dispositivo · luego {s.cuota.toFixed(2).replace(".", ",")} €/mes</div>
-                <button onClick={() => { setSentinel(s.id); setGenerated(false); }}
-                  className={`w-full rounded-lg py-2 text-sm font-medium ${sentinel === s.id ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
-                  {sentinel === s.id ? "Seleccionado" : "Seleccionar"}
-                </button>
+                <div className="p-4 flex-1 flex flex-col">
+                  <ul className="space-y-1.5 flex-1 mb-4">
+                    {s.features.map((f,i) => <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}
+                  </ul>
+                  <div className="flex items-end justify-between pt-3 border-t border-slate-100">
+                    <div>
+                      <div className="text-xl font-bold text-slate-900">{s.precio} €</div>
+                      <div className="text-xs text-slate-400">dispositivo · +{s.cuota.toFixed(2).replace(".",",")} €/mes</div>
+                    </div>
+                    <button className="text-xs bg-slate-900 text-white px-3 py-2 rounded-xl font-semibold hover:bg-slate-700">Añadir</button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {tab === "addons" && (
-        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-          {ADDONS.map((a, i) => (
-            <div key={i} className="flex items-center justify-between px-5 py-3.5">
-              <span className="text-sm text-slate-700">{a.name}</span>
-              <span className="text-sm font-medium text-slate-900 tabular-nums">
-                {a.price} € {a.cuota > 0 && <span className="text-slate-400">+ {a.cuota.toFixed(2).replace(".", ",")} €/mes</span>}
-              </span>
+      {/* CENTRALES Y GRABADORAS */}
+      {tab === "central" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {GRABADORAS.map((g,i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col">
+              <div className="h-40 overflow-hidden">
+                <img src={g.img} alt={g.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="p-4 flex-1 flex flex-col">
+                <div className="font-bold text-slate-900 text-sm mb-2">{g.name}</div>
+                <ul className="space-y-1 flex-1 mb-3">
+                  {g.features.map((f,j) => <li key={j} className="text-xs text-slate-500 flex items-start gap-1"><span className="text-emerald-500 shrink-0">✓</span>{f}</li>)}
+                </ul>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <div className="font-bold text-slate-900 text-lg">{g.precio} €</div>
+                  <button className="text-xs bg-slate-900 text-white px-3 py-2 rounded-xl font-semibold hover:bg-slate-700">Añadir</button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="font-serif text-base font-bold text-slate-900 mb-1">Generador de presupuesto</h3>
-        <p className="text-sm text-slate-500 mb-4">Genera un resumen rápido para enviar o entregar en mano al cliente. Usa el kit seleccionado en la pestaña "Kits de alarma".</p>
+      {/* COMPLEMENTOS */}
+      {tab === "addons" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {ADDONS.map((a,i) => (
+            <div key={i} className="bg-white rounded-xl border border-slate-200 px-4 py-3.5 flex items-center justify-between hover:border-slate-300 hover:shadow-sm transition">
+              <div>
+                <div className="text-sm font-medium text-slate-900">{a.name}</div>
+                {a.cuota > 0 && <div className="text-xs text-slate-400 mt-0.5">+{a.cuota.toFixed(2).replace(".",",")} €/mes adicionales</div>}
+              </div>
+              <div className="text-right shrink-0 ml-4">
+                <div className="font-bold text-slate-900">{a.price} €</div>
+                <button className="text-xs text-amber-600 hover:text-amber-700 font-medium mt-0.5">+ Añadir</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Generador de presupuesto */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center">
+            <Banknote className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-900 text-sm">Generador de presupuesto</div>
+            <div className="text-xs text-slate-400">Kit seleccionado: <strong>{KITS[selectedKit]?.name || "Hogar Total"}</strong></div>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input value={clientName} onChange={(e) => { setClientName(e.target.value); setGenerated(false); }}
+          <input value={clientName} onChange={e => { setClientName(e.target.value); setGenerated(false); }}
             placeholder="Nombre del cliente"
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           <button onClick={() => setGenerated(true)} disabled={!clientName}
-            className="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg px-4 py-2">
+            className="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-sm font-semibold rounded-xl px-5 py-2.5">
             Generar presupuesto
           </button>
         </div>
         {generated && (
-          <div className="border border-dashed border-amber-300 rounded-lg p-4 bg-amber-50/40">
-            <div className="text-xs uppercase tracking-wide text-amber-600 font-semibold mb-2">Presupuesto Seguxat</div>
-            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Cliente</span><span className="font-medium text-slate-900">{clientName}</span></div>
-            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Plan</span><span className="font-medium text-slate-900">{selectedKit.name}</span></div>
-            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Instalación (pago único)</span><span className="font-medium text-slate-900 tabular-nums">{selectedKit.alta.toFixed(2).replace(".", ",")} €</span></div>
-            <div className="flex justify-between text-sm mb-1"><span className="text-slate-600">Cuota mensual monitorización</span><span className="font-medium text-slate-900 tabular-nums">{selectedKit.cuota.toFixed(2).replace(".", ",")} €/mes</span></div>
-            <div className="flex justify-between text-sm pt-2 mt-2 border-t border-amber-200"><span className="font-semibold text-slate-900">Total primer mes</span><span className="font-bold text-slate-900 tabular-nums">{(selectedKit.alta + selectedKit.cuota).toFixed(2).replace(".", ",")} €</span></div>
+          <div className="border border-dashed border-amber-300 rounded-xl p-5 bg-amber-50/40">
+            <div className="text-xs uppercase tracking-widest text-amber-600 font-bold mb-3">Presupuesto Seguxat — {new Date().toLocaleDateString("es-ES")}</div>
+            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Cliente</span><span className="font-semibold text-slate-900">{clientName}</span></div>
+            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Plan contratado</span><span className="font-semibold text-slate-900">{KITS[selectedKit]?.name}</span></div>
+            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Instalación (pago único)</span><span className="font-semibold text-slate-900 tabular-nums">{KITS[selectedKit]?.alta} €</span></div>
+            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Cuota mensual monitorización 24/7</span><span className="font-semibold text-slate-900 tabular-nums">{KITS[selectedKit]?.cuota.toFixed(2).replace(".",",")} €/mes</span></div>
+            <div className="flex justify-between text-sm pt-3 mt-2 border-t border-amber-200">
+              <span className="font-bold text-slate-900">Total primer mes</span>
+              <span className="font-bold text-xl text-amber-600 tabular-nums">{((KITS[selectedKit]?.alta||0) + (KITS[selectedKit]?.cuota||0)).toFixed(2).replace(".",",")} €</span>
+            </div>
+            <div className="mt-3 text-xs text-slate-400 italic">Presupuesto válido 30 días · Sin permanencia · Instalación incluida en precio indicado</div>
           </div>
         )}
       </div>
@@ -1480,12 +1638,7 @@ function CatalogoView() {
   );
 }
 
-// ============================================================
-// PAGOS — Datos bancarios de la empresa (solo empleados autenticados)
-// ============================================================
-// ============================================================
-// AGENTE IA — Gerente autónomo del CRM
-// ============================================================
+
 function AgenteView({ leads, instalaciones, token }) {
   const [messages, setMessages] = useState([
     { role: "assistant", content: "Hola, soy **ARIA** — Agente de Revisión Inteligente Automatizada de Seguxat. Analizo el pipeline, detecto oportunidades, superviso instalaciones y genero informes en tiempo real. ¿En qué puedo ayudarte hoy?" }
