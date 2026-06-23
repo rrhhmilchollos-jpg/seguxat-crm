@@ -876,12 +876,16 @@ function AsignarCitaModal({ lead, onClose, onConfirm }) {
   );
 }
 
-function AgendaView() {
+function AgendaView({ currentUser }) {
   const [instalaciones, setInstalaciones] = useState(INITIAL_INSTALACIONES);
   const [modalLead, setModalLead] = useState(null);
-  const [viewMode, setViewMode] = useState("semana"); // semana | tecnicos | coordinadoras
   const [filterTech, setFilterTech] = useState("all");
   const [filterCoord, setFilterCoord] = useState("all");
+
+  // Detectar si el usuario logueado es coordinadora (Karla o María)
+  const myCoord = COORDINATORS.find((c) => c.email === currentUser?.email);
+  const isCoordinadora = !!myCoord;
+  const [viewMode, setViewMode] = useState(isCoordinadora ? "mias" : "semana"); // semana | tecnicos | coordinadoras | mias
 
   // Leads en fase instalación = candidatos a asignar
   const leadsInstalacion = INITIAL_LEADS.filter((l) => l.stage === "instalacion" || l.stage === "contrato");
@@ -912,7 +916,10 @@ function AgendaView() {
       {/* Header con controles */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
-          {[["semana", "Calendario"], ["tecnicos", "Por técnico"], ["coordinadoras", "Por coordinadora"]].map(([id, label]) => (
+          {(isCoordinadora
+            ? [["mias", "Mis instalaciones"], ["semana", "Calendario general"], ["tecnicos", "Por técnico"]]
+            : [["semana", "Calendario"], ["tecnicos", "Por técnico"], ["coordinadoras", "Por coordinadora"]]
+          ).map(([id, label]) => (
             <button key={id} onClick={() => setViewMode(id)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
               {label}
@@ -1103,6 +1110,128 @@ function AgendaView() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Vista personal de coordinadora — "Mis instalaciones" */}
+      {viewMode === "mias" && myCoord && (
+        <div className="space-y-4">
+          {/* Header personal */}
+          <div className={`rounded-2xl p-5 flex items-center gap-4 ${myCoord.color} bg-opacity-10`} style={{background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)", border: "1px solid #e2e8f0"}}>
+            <div className={`w-14 h-14 ${myCoord.color} rounded-full flex items-center justify-center text-white text-xl font-bold shadow-sm`}>
+              {myCoord.initials}
+            </div>
+            <div>
+              <div className="text-lg font-bold text-slate-900">{myCoord.name}</div>
+              <div className="text-sm text-slate-500">{myCoord.email}</div>
+              <div className="text-xs text-slate-400 mt-0.5">Coordinadora de instalaciones · Seguxat Valencia</div>
+            </div>
+            <div className="ml-auto text-right">
+              <div className="text-3xl font-bold text-slate-900 tabular-nums">{instalaciones.filter(i => i.coordinatorId === myCoord.id).length}</div>
+              <div className="text-xs text-slate-500">instalaciones gestionadas</div>
+              <div className="text-xs text-emerald-600 font-medium mt-0.5">
+                {instalaciones.filter(i => i.coordinatorId === myCoord.id && i.notified).length} clientes notificados
+              </div>
+            </div>
+          </div>
+
+          {/* Stats rápidas */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Confirmadas", val: instalaciones.filter(i => i.coordinatorId === myCoord.id && i.status === "confirmada").length, color: "text-emerald-600", bg: "bg-emerald-50" },
+              { label: "Pendientes", val: instalaciones.filter(i => i.coordinatorId === myCoord.id && i.status === "pendiente").length, color: "text-amber-600", bg: "bg-amber-50" },
+              { label: "Esta semana", val: instalaciones.filter(i => i.coordinatorId === myCoord.id).length, color: "text-blue-600", bg: "bg-blue-50" },
+            ].map((s) => (
+              <div key={s.label} className={`${s.bg} rounded-xl p-4 text-center`}>
+                <div className={`text-2xl font-bold tabular-nums ${s.color}`}>{s.val}</div>
+                <div className="text-xs text-slate-500 mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Calendario personal — mis instalaciones por fecha */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+              <span className="font-semibold text-slate-900 text-sm">Mis instalaciones programadas</span>
+              <button onClick={() => setModalLead(leadsInstalacion.find(l => !instalaciones.find(i => i.leadName === l.name)) || null)}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg px-3 py-1.5">
+                <Plus className="w-3.5 h-3.5" /> Nueva asignación
+              </button>
+            </div>
+            {instalaciones.filter(i => i.coordinatorId === myCoord.id).length === 0 ? (
+              <div className="p-10 text-center text-slate-400 text-sm">No tienes instalaciones asignadas aún.</div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {instalaciones
+                  .filter(i => i.coordinatorId === myCoord.id)
+                  .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+                  .map((inst, idx) => {
+                    const tech = techById(inst.techId);
+                    const dateObj = new Date(inst.date + "T12:00:00");
+                    const dayLabel = dateObj.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+                    const isToday = inst.date === new Date().toISOString().split("T")[0];
+                    return (
+                      <div key={idx} className={`flex items-center gap-4 px-5 py-4 hover:bg-slate-50 ${isToday ? "bg-emerald-50 border-l-4 border-emerald-500" : ""}`}>
+                        <div className="text-center w-16 shrink-0">
+                          <div className="text-xs text-slate-400 capitalize">{dateObj.toLocaleDateString("es-ES", { weekday: "short" })}</div>
+                          <div className="text-xl font-bold text-slate-900 tabular-nums">{dateObj.getDate()}</div>
+                          <div className="text-xs text-slate-400">{inst.time}h</div>
+                        </div>
+                        <div className="w-px h-12 bg-slate-200 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-900 text-sm">{inst.leadName}</div>
+                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3" />{inst.zone} · {KITS[inst.kit]?.name}
+                          </div>
+                          {isToday && <div className="text-xs text-emerald-600 font-medium mt-0.5">● Hoy</div>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <TechAvatar tech={tech} size="w-8 h-8" />
+                          <div>
+                            <div className="text-xs font-medium text-slate-700">{tech?.name}</div>
+                            <div className="text-xs text-slate-400">{tech?.phone}</div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${inst.status === "confirmada" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                            {inst.status}
+                          </span>
+                          {inst.notified
+                            ? <span className="text-xs text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Notificado</span>
+                            : <span className="text-xs text-amber-600">Sin notificar</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+
+          {/* Mis técnicos — resumen rápido de a quién tengo asignado */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="font-semibold text-slate-900 text-sm mb-3">Técnicos con los que trabajo</div>
+            <div className="grid grid-cols-2 gap-3">
+              {TECHNICIANS.filter(t => instalaciones.some(i => i.coordinatorId === myCoord.id && i.techId === t.id)).map((tech) => {
+                const myWithTech = instalaciones.filter(i => i.coordinatorId === myCoord.id && i.techId === tech.id);
+                return (
+                  <div key={tech.id} className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
+                    <TechAvatar tech={tech} size="w-9 h-9" />
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-slate-900 truncate">{tech.name}</div>
+                      <div className="text-xs text-slate-500">{myWithTech.length} instalación{myWithTech.length !== 1 ? "es" : ""}</div>
+                      <div className="text-xs text-slate-400">{tech.phone}</div>
+                    </div>
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${tech.available ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {tech.available ? "Libre" : "Ocupado"}
+                    </span>
+                  </div>
+                );
+              })}
+              {!instalaciones.some(i => i.coordinatorId === myCoord.id) && (
+                <div className="col-span-2 text-xs text-slate-400 italic">Aún no tienes técnicos asignados.</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -2196,7 +2325,7 @@ export default function SeguxatCRM() {
   const views = {
     dashboard: isDirector ? <DashboardView /> : <EmployeeDashboardView token={token} currentUser={currentUser} />,
     pipeline: <PipelineView />,
-    agenda: <AgendaView />,
+    agenda: <AgendaView currentUser={currentUser} />,
     clientes: <ClientesView />,
     catalogo: <CatalogoView />,
     comerciales: <ComercialesView />,
