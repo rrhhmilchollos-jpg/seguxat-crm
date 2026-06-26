@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, Workflow, CalendarDays, Users, Package, Trophy,
-  Search, MapPin, Phone, Plus, TrendingUp, Clock, ShieldCheck,
+  Search, MapPin, Phone, Plus, Minus, TrendingUp, Clock, ShieldCheck,
   ArrowRight, ArrowLeft, X, CheckCircle2, Building2, Bell,
   LogOut, UserCog, Mail, Lock, Loader2, AlertCircle, CreditCard, Copy, Banknote,
+  Send, FileText, Trash2, Receipt,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -1575,11 +1576,8 @@ function ClientesView({ instalaciones = [] }) {
   );
 }
 
-function CatalogoView() {
+function CatalogoView({ token, currentUser }) {
   const [tab, setTab] = useState("kits");
-  const [selectedKit, setSelectedKit] = useState("total");
-  const [clientName, setClientName] = useState("");
-  const [generated, setGenerated] = useState(false);
 
   const TABS = [
     { id: "kits", label: "🛡️ Kits de alarma" },
@@ -1623,28 +1621,28 @@ function CatalogoView() {
   ];
 
   const CAMARAS = [
-    { name: "Cámara Exterior Pro 4K", precio: 149, cuota: 4.90, img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&q=80", features: ["4K Ultra HD · 8MP","Visión nocturna 30m a color","Detección IA personas/vehículos","IP67 resistente intemperie","Ángulo 130°"], badge: "Nuevo 2026" },
-    { name: "Cámara Interior 360°", precio: 99, cuota: 2.90, img: "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?w=400&q=80", features: ["2K Full HD · 360° panorámica","Seguimiento automático movimiento","Audio bidireccional","Modo privacidad físico","Detección bebé/mascota"], badge: null },
-    { name: "Videoportero HD", precio: 199, cuota: 3.90, img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80", features: ["Pantalla táctil 7 pulgadas HD","Cámara gran angular 160°","Apertura remota desde app","Grabación visitantes 30 días","Compatible cerradura eléctrica"], badge: "Top ventas" },
-    { name: "Cámara Domo PTZ", precio: 249, cuota: 6.90, img: "https://images.unsplash.com/photo-1523474438810-b04a2480633c?w=400&q=80", features: ["Rotación 360° · Zoom 20x óptico","Seguimiento automático objetivos","4K con IR hasta 50m","Uso interior/exterior IP66","Ideal para negocios y locales"], badge: "Business" },
+    { id: "cam-ext-4k", name: "Cámara Exterior Pro 4K", precio: 149, cuota: 4.90, img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&q=80", features: ["4K Ultra HD · 8MP","Visión nocturna 30m a color","Detección IA personas/vehículos","IP67 resistente intemperie","Ángulo 130°"], badge: "Nuevo 2026" },
+    { id: "cam-int-360", name: "Cámara Interior 360°", precio: 99, cuota: 2.90, img: "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?w=400&q=80", features: ["2K Full HD · 360° panorámica","Seguimiento automático movimiento","Audio bidireccional","Modo privacidad físico","Detección bebé/mascota"], badge: null },
+    { id: "videoportero-hd", name: "Videoportero HD", precio: 199, cuota: 3.90, img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80", features: ["Pantalla táctil 7 pulgadas HD","Cámara gran angular 160°","Apertura remota desde app","Grabación visitantes 30 días","Compatible cerradura eléctrica"], badge: "Top ventas" },
+    { id: "cam-domo-ptz", name: "Cámara Domo PTZ", precio: 249, cuota: 6.90, img: "https://images.unsplash.com/photo-1523474438810-b04a2480633c?w=400&q=80", features: ["Rotación 360° · Zoom 20x óptico","Seguimiento automático objetivos","4K con IR hasta 50m","Uso interior/exterior IP66","Ideal para negocios y locales"], badge: "Business" },
   ];
 
   const GRABADORAS = [
-    { name: "NVR Seguxat 8 canales", precio: 349, img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80", features: ["8 cámaras IP simultáneas","Disco duro 4TB incluido","Almacenamiento 30 días en local","Acceso remoto app y web","HDMI 4K para monitor"] },
-    { name: "NVR Pro 16 canales", precio: 549, img: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80", features: ["16 cámaras IP simultáneas","2x HDD 8TB RAID","IA detección facial integrada","Exportación USB encriptada","Ideal para grandes negocios"] },
-    { name: "Central Alarma Pro X1", precio: 299, img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80", features: ["32 zonas programables","Batería 72h autonomía","GSM + WiFi + LAN triple conexión","Teclado táctil retroiluminado","Compatible con todos los kits Seguxat"] },
+    { id: "nvr-8ch", name: "NVR Seguxat 8 canales", precio: 349, cuota: 0, img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80", features: ["8 cámaras IP simultáneas","Disco duro 4TB incluido","Almacenamiento 30 días en local","Acceso remoto app y web","HDMI 4K para monitor"] },
+    { id: "nvr-16ch", name: "NVR Pro 16 canales", precio: 549, cuota: 0, img: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80", features: ["16 cámaras IP simultáneas","2x HDD 8TB RAID","IA detección facial integrada","Exportación USB encriptada","Ideal para grandes negocios"] },
+    { id: "central-pro-x1", name: "Central Alarma Pro X1", precio: 299, cuota: 0, img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80", features: ["32 zonas programables","Batería 72h autonomía","GSM + WiFi + LAN triple conexión","Teclado táctil retroiluminado","Compatible con todos los kits Seguxat"] },
   ];
 
   const SENTINEL_PRO = [
     {
-      id: "classic", name: "Sentinel Classic", precio: 89, cuota: 9.90,
+      id: "sentinel-classic", name: "Sentinel Classic", precio: 89, cuota: 9.90,
       img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80",
       color: "from-slate-600 to-slate-800",
       features: ["GPS tiempo real","Botón SOS · llamada a CRA","Podómetro y frecuencia cardíaca","Batería 5 días","Resistente agua IP68","App familiar en tiempo real"],
       desc: "Seguridad personal para adultos mayores y personas en riesgo.",
     },
     {
-      id: "active", name: "Sentinel Active", precio: 149, cuota: 12.90,
+      id: "sentinel-active", name: "Sentinel Active", precio: 149, cuota: 12.90,
       img: "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=400&q=80",
       color: "from-emerald-600 to-emerald-900",
       features: ["GPS + Galileo de alta precisión","Botón SOS triple · llamada + SMS + CRA","ECG y SpO2 en tiempo real","Detección caída automática","Batería 7 días","Pantalla AMOLED 1.5 pulgadas","Logo Seguxat grabado en acero"],
@@ -1652,7 +1650,7 @@ function CatalogoView() {
       badge: "Premium 2026",
     },
     {
-      id: "kids", name: "Sentinel Kids", precio: 79, cuota: 9.90,
+      id: "sentinel-kids", name: "Sentinel Kids", precio: 79, cuota: 9.90,
       img: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&q=80",
       color: "from-sky-500 to-sky-800",
       features: ["GPS en tiempo real para niños","Botón SOS directo a padres","Zona segura configurable (geovalla)","Chat de voz con padres","Resistente golpes y agua","Batería 4 días","Diseño divertido y ligero"],
@@ -1660,7 +1658,102 @@ function CatalogoView() {
     },
   ];
 
-  const sk = KITS[selectedKit] || KITS.total;
+  const ADDONS_PRO = [
+    { id: "addon-camara", name: "Cámara HD adicional", precio: 79, cuota: 4.90 },
+    { id: "addon-sensor", name: "Sensor de apertura adicional", precio: 29, cuota: 0 },
+    { id: "addon-humo", name: "Detector de humo adicional", precio: 45, cuota: 0 },
+    { id: "addon-mando", name: "Mando a distancia armado/desarmado", precio: 25, cuota: 0 },
+    { id: "addon-llavero", name: "Llavero de proximidad", precio: 19, cuota: 0 },
+  ];
+
+  // ── Carrito de presupuesto ──────────────────────────────────────────────
+  // cart: { [itemId]: { id, nombre, precioUnitario, cuotaUnitaria, cantidad, categoria } }
+  const [cart, setCart] = useState({});
+  // Cantidades elegidas en cada tarjeta antes de añadir (selector de unidades)
+  const [qty, setQty] = useState({});
+
+  function getQty(id) {
+    return qty[id] ?? 1;
+  }
+  function setQtyFor(id, value) {
+    const v = Math.max(1, Math.min(99, Number(value) || 1));
+    setQty(prev => ({ ...prev, [id]: v }));
+  }
+
+  function addToCart(item, categoria) {
+    const cantidad = getQty(item.id);
+    setCart(prev => {
+      const existing = prev[item.id];
+      return {
+        ...prev,
+        [item.id]: {
+          id: item.id,
+          nombre: item.name || item.nombre,
+          precioUnitario: item.precio,
+          cuotaUnitaria: item.cuota || 0,
+          cantidad: existing ? existing.cantidad + cantidad : cantidad,
+          categoria,
+        },
+      };
+    });
+  }
+
+  function setCartQty(id, cantidad) {
+    setCart(prev => {
+      if (!prev[id]) return prev;
+      if (cantidad <= 0) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: { ...prev[id], cantidad } };
+    });
+  }
+
+  function removeFromCart(id) {
+    setCart(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  const cartItems = Object.values(cart);
+  const cartCount = cartItems.reduce((acc, it) => acc + it.cantidad, 0);
+
+  // ── Generador de presupuesto ────────────────────────────────────────────
+  const [showSendModal, setShowSendModal] = useState(false);
+
+  function QuantityPicker({ id, size = "sm" }) {
+    const value = getQty(id);
+    const dim = size === "sm" ? "w-6 h-6" : "w-7 h-7";
+    return (
+      <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={() => setQtyFor(id, value - 1)}
+          className={`${dim} flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100`}
+        >
+          <Minus className="w-3 h-3" />
+        </button>
+        <input
+          type="number"
+          min={1}
+          max={99}
+          value={value}
+          onChange={e => setQtyFor(id, e.target.value)}
+          className="w-9 text-center text-sm font-semibold border border-slate-300 rounded-lg py-0.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        />
+        <button
+          type="button"
+          onClick={() => setQtyFor(id, value + 1)}
+          className={`${dim} flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100`}
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -1677,67 +1770,84 @@ function CatalogoView() {
       {/* KITS */}
       {tab === "kits" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {KITS_PRO.map(k => (
-            <div key={k.id} onClick={() => { setSelectedKit(k.id); setGenerated(false); }}
-              className={`rounded-2xl border overflow-hidden cursor-pointer transition hover:shadow-lg ${selectedKit===k.id ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white flex flex-col`}>
-              {/* Image */}
-              <div className={`h-44 bg-gradient-to-br ${k.color} relative overflow-hidden`}>
-                <img src={k.img} alt={k.name} className="w-full h-full object-cover opacity-30 mix-blend-luminosity" />
-                <div className="absolute inset-0 flex flex-col justify-end p-4">
-                  {k.badge && <span className="self-start text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold mb-2">{k.badge}</span>}
-                  <div className="text-white text-xl font-bold">{k.name}</div>
-                  <div className="text-white/70 text-xs mt-0.5">{k.desc}</div>
-                </div>
-                {selectedKit===k.id && <div className="absolute top-3 right-3 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-white" /></div>}
-              </div>
-              {/* Features */}
-              <div className="p-4 flex-1 flex flex-col">
-                <ul className="space-y-1.5 flex-1 mb-4">
-                  {k.features.map((f,i) => (
-                    <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex items-end justify-between mt-2">
-                  <div>
-                    <div className="text-2xl font-bold text-slate-900">{k.precio} €</div>
-                    <div className="text-xs text-slate-400">instalación · luego <strong>{k.cuota.toFixed(2).replace(".",",")} €/mes</strong></div>
+          {KITS_PRO.map(k => {
+            const inCart = !!cart[k.id];
+            return (
+              <div key={k.id}
+                className={`rounded-2xl border overflow-hidden transition hover:shadow-lg ${inCart ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"} bg-white flex flex-col`}>
+                {/* Image */}
+                <div className={`h-44 bg-gradient-to-br ${k.color} relative overflow-hidden`}>
+                  <img src={k.img} alt={k.name} className="w-full h-full object-cover opacity-30 mix-blend-luminosity" />
+                  <div className="absolute inset-0 flex flex-col justify-end p-4">
+                    {k.badge && <span className="self-start text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold mb-2">{k.badge}</span>}
+                    <div className="text-white text-xl font-bold">{k.name}</div>
+                    <div className="text-white/70 text-xs mt-0.5">{k.desc}</div>
                   </div>
-                  <button className={`px-4 py-2 rounded-xl text-sm font-semibold ${selectedKit===k.id ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
-                    {selectedKit===k.id ? "✓ Seleccionado" : "Seleccionar"}
-                  </button>
+                  {inCart && <div className="absolute top-3 right-3 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-white" /></div>}
+                </div>
+                {/* Features */}
+                <div className="p-4 flex-1 flex flex-col">
+                  <ul className="space-y-1.5 flex-1 mb-4">
+                    {k.features.map((f,i) => (
+                      <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-end justify-between mt-2 gap-2">
+                    <div>
+                      <div className="text-2xl font-bold text-slate-900">{k.precio} €</div>
+                      <div className="text-xs text-slate-400">instalación · luego <strong>{k.cuota.toFixed(2).replace(".",",")} €/mes</strong></div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <QuantityPicker id={k.id} />
+                      <button onClick={() => addToCart(k, "kit")}
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap ${inCart ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+                        {inCart ? `✓ En presupuesto (${cart[k.id].cantidad})` : "Seleccionar"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* CÁMARAS */}
       {tab === "camaras" && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {CAMARAS.map((c,i) => (
-            <div key={i} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition flex flex-col">
-              <div className="h-40 overflow-hidden relative">
-                <img src={c.img} alt={c.name} className="w-full h-full object-cover" />
-                {c.badge && <span className="absolute top-2 left-2 text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold">{c.badge}</span>}
-              </div>
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="font-bold text-slate-900 text-sm mb-2">{c.name}</div>
-                <ul className="space-y-1 flex-1 mb-3">
-                  {c.features.map((f,j) => <li key={j} className="text-xs text-slate-500 flex items-start gap-1"><span className="text-emerald-500 shrink-0">✓</span>{f}</li>)}
-                </ul>
-                <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
-                  <div>
-                    <div className="font-bold text-slate-900">{c.precio} €</div>
-                    <div className="text-xs text-slate-400">+{c.cuota.toFixed(2).replace(".",",")} €/mes</div>
+          {CAMARAS.map((c) => {
+            const inCart = !!cart[c.id];
+            return (
+              <div key={c.id} className={`bg-white rounded-2xl border overflow-hidden hover:shadow-md transition flex flex-col ${inCart ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200 hover:border-slate-300"}`}>
+                <div className="h-40 overflow-hidden relative">
+                  <img src={c.img} alt={c.name} className="w-full h-full object-cover" />
+                  {c.badge && <span className="absolute top-2 left-2 text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold">{c.badge}</span>}
+                  {inCart && <div className="absolute top-2 right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center"><CheckCircle2 className="w-3.5 h-3.5 text-white" /></div>}
+                </div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="font-bold text-slate-900 text-sm mb-2">{c.name}</div>
+                  <ul className="space-y-1 flex-1 mb-3">
+                    {c.features.map((f,j) => <li key={j} className="text-xs text-slate-500 flex items-start gap-1"><span className="text-emerald-500 shrink-0">✓</span>{f}</li>)}
+                  </ul>
+                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 gap-2">
+                    <div>
+                      <div className="font-bold text-slate-900">{c.precio} €</div>
+                      {c.cuota > 0 && <div className="text-xs text-slate-400">+{c.cuota.toFixed(2).replace(".",",")} €/mes</div>}
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <QuantityPicker id={c.id} />
+                      <button onClick={() => addToCart(c, "camara")}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap ${inCart ? "bg-amber-500 text-white" : "bg-slate-900 text-white hover:bg-slate-700"}`}>
+                        {inCart ? `✓ Añadido (${cart[c.id].cantidad})` : "Añadir"}
+                      </button>
+                    </div>
                   </div>
-                  <button className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-slate-700">Añadir</button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1753,30 +1863,40 @@ function CatalogoView() {
             <img src="https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=200&q=80" alt="Sentinel" className="w-28 h-28 rounded-2xl object-cover shrink-0 border-2 border-amber-500/30" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {SENTINEL_PRO.map(s => (
-              <div key={s.id} className="rounded-2xl border border-slate-200 overflow-hidden bg-white hover:shadow-lg transition flex flex-col">
-                <div className={`h-48 bg-gradient-to-br ${s.color} relative overflow-hidden`}>
-                  <img src={s.img} alt={s.name} className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
-                  <div className="absolute inset-0 flex flex-col justify-end p-4">
-                    {s.badge && <span className="self-start text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold mb-2">{s.badge}</span>}
-                    <div className="text-white text-lg font-bold">{s.name}</div>
-                    <div className="text-white/70 text-xs mt-0.5">{s.desc}</div>
-                  </div>
-                </div>
-                <div className="p-4 flex-1 flex flex-col">
-                  <ul className="space-y-1.5 flex-1 mb-4">
-                    {s.features.map((f,i) => <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}
-                  </ul>
-                  <div className="flex items-end justify-between pt-3 border-t border-slate-100">
-                    <div>
-                      <div className="text-xl font-bold text-slate-900">{s.precio} €</div>
-                      <div className="text-xs text-slate-400">dispositivo · +{s.cuota.toFixed(2).replace(".",",")} €/mes</div>
+            {SENTINEL_PRO.map(s => {
+              const inCart = !!cart[s.id];
+              return (
+                <div key={s.id} className={`rounded-2xl border overflow-hidden bg-white hover:shadow-lg transition flex flex-col ${inCart ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"}`}>
+                  <div className={`h-48 bg-gradient-to-br ${s.color} relative overflow-hidden`}>
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
+                    <div className="absolute inset-0 flex flex-col justify-end p-4">
+                      {s.badge && <span className="self-start text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold mb-2">{s.badge}</span>}
+                      <div className="text-white text-lg font-bold">{s.name}</div>
+                      <div className="text-white/70 text-xs mt-0.5">{s.desc}</div>
                     </div>
-                    <button className="text-xs bg-slate-900 text-white px-3 py-2 rounded-xl font-semibold hover:bg-slate-700">Añadir</button>
+                    {inCart && <div className="absolute top-3 right-3 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-white" /></div>}
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <ul className="space-y-1.5 flex-1 mb-4">
+                      {s.features.map((f,i) => <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}
+                    </ul>
+                    <div className="flex items-end justify-between pt-3 border-t border-slate-100 gap-2">
+                      <div>
+                        <div className="text-xl font-bold text-slate-900">{s.precio} €</div>
+                        <div className="text-xs text-slate-400">dispositivo · +{s.cuota.toFixed(2).replace(".",",")} €/mes</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <QuantityPicker id={s.id} />
+                        <button onClick={() => addToCart(s, "sentinel")}
+                          className={`text-xs px-3 py-2 rounded-xl font-semibold whitespace-nowrap ${inCart ? "bg-amber-500 text-white" : "bg-slate-900 text-white hover:bg-slate-700"}`}>
+                          {inCart ? `✓ Añadido (${cart[s.id].cantidad})` : "Añadir"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1784,78 +1904,344 @@ function CatalogoView() {
       {/* CENTRALES Y GRABADORAS */}
       {tab === "central" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {GRABADORAS.map((g,i) => (
-            <div key={i} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col">
-              <div className="h-40 overflow-hidden">
-                <img src={g.img} alt={g.name} className="w-full h-full object-cover" />
-              </div>
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="font-bold text-slate-900 text-sm mb-2">{g.name}</div>
-                <ul className="space-y-1 flex-1 mb-3">
-                  {g.features.map((f,j) => <li key={j} className="text-xs text-slate-500 flex items-start gap-1"><span className="text-emerald-500 shrink-0">✓</span>{f}</li>)}
-                </ul>
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                  <div className="font-bold text-slate-900 text-lg">{g.precio} €</div>
-                  <button className="text-xs bg-slate-900 text-white px-3 py-2 rounded-xl font-semibold hover:bg-slate-700">Añadir</button>
+          {GRABADORAS.map((g) => {
+            const inCart = !!cart[g.id];
+            return (
+              <div key={g.id} className={`bg-white rounded-2xl border overflow-hidden hover:shadow-md transition flex flex-col ${inCart ? "border-amber-400 ring-2 ring-amber-100" : "border-slate-200"}`}>
+                <div className="h-40 overflow-hidden relative">
+                  <img src={g.img} alt={g.name} className="w-full h-full object-cover" />
+                  {inCart && <div className="absolute top-2 right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center"><CheckCircle2 className="w-3.5 h-3.5 text-white" /></div>}
+                </div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="font-bold text-slate-900 text-sm mb-2">{g.name}</div>
+                  <ul className="space-y-1 flex-1 mb-3">
+                    {g.features.map((f,j) => <li key={j} className="text-xs text-slate-500 flex items-start gap-1"><span className="text-emerald-500 shrink-0">✓</span>{f}</li>)}
+                  </ul>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+                    <div className="font-bold text-slate-900 text-lg">{g.precio} €</div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <QuantityPicker id={g.id} />
+                      <button onClick={() => addToCart(g, "central")}
+                        className={`text-xs px-3 py-2 rounded-xl font-semibold whitespace-nowrap ${inCart ? "bg-amber-500 text-white" : "bg-slate-900 text-white hover:bg-slate-700"}`}>
+                        {inCart ? `✓ Añadido (${cart[g.id].cantidad})` : "Añadir"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* COMPLEMENTOS */}
       {tab === "addons" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {ADDONS.map((a,i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 px-4 py-3.5 flex items-center justify-between hover:border-slate-300 hover:shadow-sm transition">
-              <div>
-                <div className="text-sm font-medium text-slate-900">{a.name}</div>
-                {a.cuota > 0 && <div className="text-xs text-slate-400 mt-0.5">+{a.cuota.toFixed(2).replace(".",",")} €/mes adicionales</div>}
+          {ADDONS_PRO.map((a) => {
+            const inCart = !!cart[a.id];
+            return (
+              <div key={a.id} className={`bg-white rounded-xl border px-4 py-3.5 flex items-center justify-between hover:shadow-sm transition gap-3 ${inCart ? "border-amber-400 ring-1 ring-amber-100" : "border-slate-200 hover:border-slate-300"}`}>
+                <div>
+                  <div className="text-sm font-medium text-slate-900">{a.name}</div>
+                  {a.cuota > 0 && <div className="text-xs text-slate-400 mt-0.5">+{a.cuota.toFixed(2).replace(".",",")} €/mes adicionales</div>}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <QuantityPicker id={a.id} />
+                  <div className="text-right">
+                    <div className="font-bold text-slate-900">{a.precio} €</div>
+                    <button onClick={() => addToCart(a, "addon")}
+                      className={`text-xs font-medium mt-0.5 ${inCart ? "text-amber-600" : "text-amber-600 hover:text-amber-700"}`}>
+                      {inCart ? `✓ Añadido (${cart[a.id].cantidad})` : "+ Añadir"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="text-right shrink-0 ml-4">
-                <div className="font-bold text-slate-900">{a.price} €</div>
-                <button className="text-xs text-amber-600 hover:text-amber-700 font-medium mt-0.5">+ Añadir</button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Generador de presupuesto */}
+      <PresupuestoGenerador
+        cartItems={cartItems}
+        cartCount={cartCount}
+        setCartQty={setCartQty}
+        removeFromCart={removeFromCart}
+        onOpenSend={() => setShowSendModal(true)}
+      />
+
+      {showSendModal && (
+        <EnviarPresupuestoModal
+          token={token}
+          currentUser={currentUser}
+          cartItems={cartItems}
+          onClose={() => setShowSendModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Generador de presupuesto — refleja TODO lo añadido al carrito
+// (kits, cámaras, sentinel, centrales y complementos), con unidades.
+// ============================================================
+function PresupuestoGenerador({ cartItems, cartCount, setCartQty, removeFromCart, onOpenSend }) {
+  const subtotal = cartItems.reduce((acc, it) => acc + it.precioUnitario * it.cantidad, 0);
+  const cuotaMensual = cartItems.reduce((acc, it) => acc + (it.cuotaUnitaria || 0) * it.cantidad, 0);
+
+  const CATEGORIA_LABEL = {
+    kit: "Kit de alarma",
+    camara: "Cámara HD",
+    sentinel: "Sentinel Watch",
+    central: "Central / Grabadora",
+    addon: "Complemento",
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center">
+          <Banknote className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <div className="font-bold text-slate-900 text-sm">Generador de presupuesto</div>
+          <div className="text-xs text-slate-400">
+            {cartCount > 0 ? <>{cartCount} unidad{cartCount !== 1 ? "es" : ""} añadidas al presupuesto</> : "Añade kits o equipos arriba para empezar"}
+          </div>
+        </div>
+      </div>
+
+      {cartItems.length === 0 ? (
+        <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-sm text-slate-400">
+          Todavía no has añadido ningún kit ni equipo. Usa los botones "Seleccionar" / "Añadir" de arriba.
+        </div>
+      ) : (
+        <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 mb-4">
+          {cartItems.map(it => (
+            <div key={it.id} className="flex items-center gap-3 px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-slate-900 truncate">{it.nombre}</div>
+                <div className="text-xs text-slate-400">
+                  {CATEGORIA_LABEL[it.categoria] || ""} · {it.precioUnitario} € /ud
+                  {it.cuotaUnitaria > 0 && <> · +{it.cuotaUnitaria.toFixed(2).replace(".",",")} €/mes /ud</>}
+                </div>
               </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button onClick={() => setCartQty(it.id, it.cantidad - 1)}
+                  className="w-6 h-6 flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">
+                  <Minus className="w-3 h-3" />
+                </button>
+                <span className="w-8 text-center text-sm font-semibold tabular-nums">{it.cantidad}</span>
+                <button onClick={() => setCartQty(it.id, it.cantidad + 1)}
+                  className="w-6 h-6 flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="text-sm font-bold text-slate-900 w-20 text-right shrink-0 tabular-nums">
+                {(it.precioUnitario * it.cantidad).toFixed(2).replace(".",",")} €
+              </div>
+              <button onClick={() => removeFromCart(it.id)} className="text-slate-300 hover:text-red-500 shrink-0">
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Generador de presupuesto */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center">
-            <Banknote className="w-4 h-4 text-white" />
+      {cartItems.length > 0 && (
+        <div className="border border-dashed border-amber-300 rounded-xl p-5 bg-amber-50/40">
+          <div className="text-xs uppercase tracking-widest text-amber-600 font-bold mb-3">Resumen del presupuesto — {new Date().toLocaleDateString("es-ES")}</div>
+          <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Subtotal equipos e instalación</span><span className="font-semibold text-slate-900 tabular-nums">{subtotal.toFixed(2).replace(".",",")} €</span></div>
+          {cuotaMensual > 0 && (
+            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Cuota mensual monitorización 24/7</span><span className="font-semibold text-slate-900 tabular-nums">{cuotaMensual.toFixed(2).replace(".",",")} €/mes</span></div>
+          )}
+          <div className="flex justify-between text-sm pt-3 mt-2 border-t border-amber-200">
+            <span className="font-bold text-slate-900">Total primer pago (sin IVA)</span>
+            <span className="font-bold text-xl text-amber-600 tabular-nums">{(subtotal + cuotaMensual).toFixed(2).replace(".",",")} €</span>
           </div>
-          <div>
-            <div className="font-bold text-slate-900 text-sm">Generador de presupuesto</div>
-            <div className="text-xs text-slate-400">Kit seleccionado: <strong>{KITS[selectedKit]?.name || "Hogar Total"}</strong></div>
-          </div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input value={clientName} onChange={e => { setClientName(e.target.value); setGenerated(false); }}
-            placeholder="Nombre del cliente"
-            className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-          <button onClick={() => setGenerated(true)} disabled={!clientName}
-            className="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-sm font-semibold rounded-xl px-5 py-2.5">
-            Generar presupuesto
+          <div className="mt-3 text-xs text-slate-400 italic">Presupuesto válido 30 días · Sin permanencia · El IVA y la opción de factura se configuran al enviarlo al cliente</div>
+
+          <button onClick={onOpenSend}
+            className="mt-4 w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl px-5 py-3">
+            <Send className="w-4 h-4" />
+            Enviar presupuesto al cliente
           </button>
         </div>
-        {generated && (
-          <div className="border border-dashed border-amber-300 rounded-xl p-5 bg-amber-50/40">
-            <div className="text-xs uppercase tracking-widest text-amber-600 font-bold mb-3">Presupuesto Seguxat — {new Date().toLocaleDateString("es-ES")}</div>
-            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Cliente</span><span className="font-semibold text-slate-900">{clientName}</span></div>
-            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Plan contratado</span><span className="font-semibold text-slate-900">{KITS[selectedKit]?.name}</span></div>
-            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Instalación (pago único)</span><span className="font-semibold text-slate-900 tabular-nums">{KITS[selectedKit]?.alta} €</span></div>
-            <div className="flex justify-between text-sm mb-2"><span className="text-slate-500">Cuota mensual monitorización 24/7</span><span className="font-semibold text-slate-900 tabular-nums">{KITS[selectedKit]?.cuota.toFixed(2).replace(".",",")} €/mes</span></div>
-            <div className="flex justify-between text-sm pt-3 mt-2 border-t border-amber-200">
-              <span className="font-bold text-slate-900">Total primer mes</span>
-              <span className="font-bold text-xl text-amber-600 tabular-nums">{((KITS[selectedKit]?.alta||0) + (KITS[selectedKit]?.cuota||0)).toFixed(2).replace(".",",")} €</span>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Modal de envío: datos del cliente, IVA, factura y link de pago Stripe.
+// ============================================================
+function EnviarPresupuestoModal({ token, currentUser, cartItems, onClose }) {
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientNif, setClientNif] = useState("");
+  const [isCompany, setIsCompany] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [applyIva, setApplyIva] = useState(true);
+  const [isInvoice, setIsInvoice] = useState(false);
+  const [includePaymentLink, setIncludePaymentLink] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState(null); // { ok, total, paymentUrl, stripeConfigured } | { error }
+
+  const IVA_PCT = 21;
+  const subtotal = cartItems.reduce((acc, it) => acc + it.precioUnitario * it.cantidad, 0);
+  const cuotaMensual = cartItems.reduce((acc, it) => acc + (it.cuotaUnitaria || 0) * it.cantidad, 0);
+  const baseImponible = subtotal + cuotaMensual;
+  const ivaAmount = applyIva ? baseImponible * (IVA_PCT / 100) : 0;
+  const total = baseImponible + ivaAmount;
+
+  const canSend = clientName.trim() && /\S+@\S+\.\S+/.test(clientEmail) && (!isCompany || companyName.trim());
+
+  async function handleSend() {
+    if (!canSend || sending) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/presupuestos/enviar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          clientName,
+          clientEmail,
+          clientNif: clientNif || undefined,
+          isCompany,
+          companyName: isCompany ? companyName : undefined,
+          items: cartItems.map(it => ({
+            nombre: it.nombre,
+            cantidad: it.cantidad,
+            precioUnitario: it.precioUnitario,
+            cuotaUnitaria: it.cuotaUnitaria || 0,
+          })),
+          ivaPct: applyIva ? IVA_PCT : 0,
+          isInvoice,
+          crearLinkPago: includePaymentLink,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResult({ error: data.error || "No se pudo enviar el presupuesto." });
+      } else {
+        setResult(data);
+      }
+    } catch (e) {
+      setResult({ error: "Error de conexión con el servidor. Comprueba tu red e inténtalo de nuevo." });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-40 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 sticky top-0 bg-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+              <Send className="w-4 h-4 text-white" />
             </div>
-            <div className="mt-3 text-xs text-slate-400 italic">Presupuesto válido 30 días · Sin permanencia · Instalación incluida en precio indicado</div>
+            <div className="font-bold text-slate-900 text-sm">Enviar presupuesto al cliente</div>
           </div>
-        )}
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {!result?.ok && (
+            <>
+              {/* Tipo de cliente */}
+              <div className="flex gap-2">
+                <button onClick={() => setIsCompany(false)}
+                  className={`flex-1 text-sm font-medium rounded-xl px-3 py-2.5 border ${!isCompany ? "border-amber-400 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-500"}`}>
+                  Particular
+                </button>
+                <button onClick={() => setIsCompany(true)}
+                  className={`flex-1 text-sm font-medium rounded-xl px-3 py-2.5 border ${isCompany ? "border-amber-400 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-500"}`}>
+                  Empresa
+                </button>
+              </div>
+
+              {isCompany && (
+                <input value={companyName} onChange={e => setCompanyName(e.target.value)}
+                  placeholder="Nombre de la empresa"
+                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              )}
+
+              <input value={clientName} onChange={e => setClientName(e.target.value)}
+                placeholder={isCompany ? "Persona de contacto" : "Nombre del cliente"}
+                className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+
+              <input value={clientEmail} onChange={e => setClientEmail(e.target.value)} type="email"
+                placeholder="Email del cliente"
+                className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+
+              <input value={clientNif} onChange={e => setClientNif(e.target.value)}
+                placeholder={isCompany ? "CIF de la empresa (para factura)" : "NIF/DNI (opcional, para factura)"}
+                className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+
+              {/* Opciones */}
+              <div className="space-y-2.5 pt-1">
+                <label className="flex items-center justify-between gap-3 text-sm text-slate-700 cursor-pointer">
+                  <span>Aplicar IVA (21%)</span>
+                  <input type="checkbox" checked={applyIva} onChange={e => setApplyIva(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+                </label>
+                <label className="flex items-center justify-between gap-3 text-sm text-slate-700 cursor-pointer">
+                  <span>Emitir como factura de Seguxat (en lugar de presupuesto)</span>
+                  <input type="checkbox" checked={isInvoice} onChange={e => setIsInvoice(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+                </label>
+                <label className="flex items-center justify-between gap-3 text-sm text-slate-700 cursor-pointer">
+                  <span>Incluir link de pago Stripe en el correo</span>
+                  <input type="checkbox" checked={includePaymentLink} onChange={e => setIncludePaymentLink(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+                </label>
+              </div>
+
+              {/* Resumen de importes */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 text-sm space-y-1.5">
+                <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="tabular-nums">{baseImponible.toFixed(2).replace(".",",")} €</span></div>
+                <div className="flex justify-between text-slate-500"><span>IVA {applyIva ? `(${IVA_PCT}%)` : "(no aplicado)"}</span><span className="tabular-nums">{ivaAmount.toFixed(2).replace(".",",")} €</span></div>
+                <div className="flex justify-between font-bold text-slate-900 pt-1.5 border-t border-slate-200"><span>Total a enviar</span><span className="tabular-nums">{total.toFixed(2).replace(".",",")} €</span></div>
+              </div>
+
+              {result?.error && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-3 py-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  {result.error}
+                </div>
+              )}
+
+              <button onClick={handleSend} disabled={!canSend || sending}
+                className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-sm font-semibold rounded-xl px-5 py-3">
+                {sending ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</> : <><Send className="w-4 h-4" />{isInvoice ? "Enviar factura" : "Enviar presupuesto"} por correo</>}
+              </button>
+            </>
+          )}
+
+          {result?.ok && (
+            <div className="text-center py-2">
+              <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+              </div>
+              <div className="font-bold text-slate-900 mb-1">{isInvoice ? "Factura" : "Presupuesto"} enviado correctamente</div>
+              <div className="text-sm text-slate-500 mb-4">
+                Nº {result.numero} · {result.total?.toFixed(2).replace(".",",")} € enviados a {clientEmail}
+              </div>
+              {result.paymentUrl ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500 mb-4 break-all">
+                  Link de pago Stripe incluido: <a href={result.paymentUrl} target="_blank" rel="noreferrer" className="text-amber-600 font-medium">{result.paymentUrl}</a>
+                </div>
+              ) : includePaymentLink && !result.stripeConfigured ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 mb-4">
+                  El correo se envió sin botón de pago: Stripe todavía no está configurado en el servidor (falta STRIPE_SECRET_KEY).
+                </div>
+              ) : null}
+              <button onClick={onClose} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl px-5 py-2.5">
+                Cerrar
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3325,6 +3711,7 @@ export default function SeguxatCRM() {
   // Cargar y refrescar leads cada 30s automáticamente
   const [lastSync, setLastSync] = useState(null);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
+  const [showNotifs, setShowNotifs] = useState(false);
 
   function fetchLeads(silent = false) {
     if (!token) return;
@@ -3413,7 +3800,7 @@ export default function SeguxatCRM() {
       onGoToAgenda={(lead) => { setAgendaAutoLead(lead); setActive("agenda"); }} />,
     agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} token={token} autoLead={agendaAutoLead} clearAutoLead={() => setAgendaAutoLead(null)} />,
     clientes: <ClientesView instalaciones={instalaciones} />,
-    catalogo: <CatalogoView />,
+    catalogo: <CatalogoView token={token} currentUser={currentUser} />,
     pagos: <PagosView />,
     agente: <AgenteView leads={leads} instalaciones={instalaciones} token={token} />,
     comerciales: <ComercialesView token={token} leads={leads} />,
@@ -3490,10 +3877,45 @@ export default function SeguxatCRM() {
               className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition ${active === "agente" ? "bg-violet-600 text-white border-violet-600" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
               {active === "agente" ? <><X className="w-3.5 h-3.5" /> Cerrar ARIA</> : <>🤖 Agente IA</>}
             </button>
-            <button className="relative text-slate-400 hover:text-slate-600">
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full" />
-            </button>
+            <div className="relative">
+              <button onClick={() => setShowNotifs(v => !v)} className="relative text-slate-400 hover:text-slate-600">
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full" />
+              </button>
+              {showNotifs && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
+                  <div className="absolute right-0 top-9 w-80 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 font-bold text-sm text-slate-900">Notificaciones</div>
+                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                      {leads.filter(l => l.stage === "cita" && l.cita).slice(0, 5).map(l => (
+                        <button key={`cita-${l.id}`} onClick={() => { setActive("agenda"); setShowNotifs(false); }}
+                          className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-start gap-2.5">
+                          <CalendarDays className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">Cita con {l.name}</div>
+                            <div className="text-xs text-slate-400">{l.cita} · {l.zone}</div>
+                          </div>
+                        </button>
+                      ))}
+                      {instalaciones.filter(i => i.status === "pendiente").slice(0, 5).map((i, idx) => (
+                        <button key={`inst-${idx}`} onClick={() => { setActive("agenda"); setShowNotifs(false); }}
+                          className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-start gap-2.5">
+                          <Clock className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">Instalación pendiente de confirmar</div>
+                            <div className="text-xs text-slate-400">{i.leadName || i.zone}</div>
+                          </div>
+                        </button>
+                      ))}
+                      {leads.filter(l => l.stage === "cita" && l.cita).length === 0 && instalaciones.filter(i => i.status === "pendiente").length === 0 && (
+                        <div className="px-4 py-6 text-center text-sm text-slate-400">No hay notificaciones nuevas</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
         <main className="flex-1 overflow-auto p-6">
