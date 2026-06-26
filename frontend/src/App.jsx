@@ -1796,8 +1796,10 @@ function CatalogoView({ token, currentUser }) {
                   </ul>
                   <div className="flex items-end justify-between mt-2 gap-2">
                     <div>
-                      <div className="text-2xl font-bold text-slate-900">{k.precio} €</div>
-                      <div className="text-xs text-slate-400">instalación · luego <strong>{k.cuota.toFixed(2).replace(".",",")} €/mes</strong></div>
+                      <div className="text-2xl font-bold text-slate-900">{(k.precio * getQty(k.id)).toFixed(2).replace(/\.00$/,"").replace(".",",")} €</div>
+                      <div className="text-xs text-slate-400">
+                        instalación{getQty(k.id) > 1 ? ` (${k.precio} € x${getQty(k.id)})` : ""} · luego <strong>{(k.cuota * getQty(k.id)).toFixed(2).replace(".",",")} €/mes</strong>
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <QuantityPicker id={k.id} />
@@ -1833,8 +1835,8 @@ function CatalogoView({ token, currentUser }) {
                   </ul>
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 gap-2">
                     <div>
-                      <div className="font-bold text-slate-900">{c.precio} €</div>
-                      {c.cuota > 0 && <div className="text-xs text-slate-400">+{c.cuota.toFixed(2).replace(".",",")} €/mes</div>}
+                      <div className="font-bold text-slate-900">{(c.precio * getQty(c.id)).toFixed(2).replace(/\.00$/,"").replace(".",",")} €{getQty(c.id) > 1 && <span className="text-xs text-slate-400 font-normal"> ({c.precio} € x{getQty(c.id)})</span>}</div>
+                      {c.cuota > 0 && <div className="text-xs text-slate-400">+{(c.cuota * getQty(c.id)).toFixed(2).replace(".",",")} €/mes</div>}
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       <QuantityPicker id={c.id} />
@@ -1882,8 +1884,8 @@ function CatalogoView({ token, currentUser }) {
                     </ul>
                     <div className="flex items-end justify-between pt-3 border-t border-slate-100 gap-2">
                       <div>
-                        <div className="text-xl font-bold text-slate-900">{s.precio} €</div>
-                        <div className="text-xs text-slate-400">dispositivo · +{s.cuota.toFixed(2).replace(".",",")} €/mes</div>
+                        <div className="text-xl font-bold text-slate-900">{(s.precio * getQty(s.id)).toFixed(2).replace(/\.00$/,"").replace(".",",")} €{getQty(s.id) > 1 && <span className="text-xs text-slate-400 font-normal"> ({s.precio} € x{getQty(s.id)})</span>}</div>
+                        <div className="text-xs text-slate-400">dispositivo · +{(s.cuota * getQty(s.id)).toFixed(2).replace(".",",")} €/mes</div>
                       </div>
                       <div className="flex flex-col items-end gap-1.5">
                         <QuantityPicker id={s.id} />
@@ -1918,7 +1920,7 @@ function CatalogoView({ token, currentUser }) {
                     {g.features.map((f,j) => <li key={j} className="text-xs text-slate-500 flex items-start gap-1"><span className="text-emerald-500 shrink-0">✓</span>{f}</li>)}
                   </ul>
                   <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
-                    <div className="font-bold text-slate-900 text-lg">{g.precio} €</div>
+                    <div className="font-bold text-slate-900 text-lg">{(g.precio * getQty(g.id)).toFixed(2).replace(/\.00$/,"").replace(".",",")} €{getQty(g.id) > 1 && <span className="text-xs text-slate-400 font-normal"> ({g.precio} € x{getQty(g.id)})</span>}</div>
                     <div className="flex flex-col items-end gap-1.5">
                       <QuantityPicker id={g.id} />
                       <button onClick={() => addToCart(g, "central")}
@@ -1943,12 +1945,12 @@ function CatalogoView({ token, currentUser }) {
               <div key={a.id} className={`bg-white rounded-xl border px-4 py-3.5 flex items-center justify-between hover:shadow-sm transition gap-3 ${inCart ? "border-amber-400 ring-1 ring-amber-100" : "border-slate-200 hover:border-slate-300"}`}>
                 <div>
                   <div className="text-sm font-medium text-slate-900">{a.name}</div>
-                  {a.cuota > 0 && <div className="text-xs text-slate-400 mt-0.5">+{a.cuota.toFixed(2).replace(".",",")} €/mes adicionales</div>}
+                  {a.cuota > 0 && <div className="text-xs text-slate-400 mt-0.5">+{(a.cuota * getQty(a.id)).toFixed(2).replace(".",",")} €/mes adicionales</div>}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <QuantityPicker id={a.id} />
                   <div className="text-right">
-                    <div className="font-bold text-slate-900">{a.precio} €</div>
+                    <div className="font-bold text-slate-900">{(a.precio * getQty(a.id)).toFixed(2).replace(/\.00$/,"").replace(".",",")} €{getQty(a.id) > 1 && <span className="text-xs text-slate-400 font-normal"> ({a.precio} € x{getQty(a.id)})</span>}</div>
                     <button onClick={() => addToCart(a, "addon")}
                       className={`text-xs font-medium mt-0.5 ${inCart ? "text-amber-600" : "text-amber-600 hover:text-amber-700"}`}>
                       {inCart ? `✓ Añadido (${cart[a.id].cantidad})` : "+ Añadir"}
