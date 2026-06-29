@@ -1664,6 +1664,16 @@ function CatalogoView({ token, currentUser }) {
     { id: "addon-humo", name: "Detector de humo adicional", precio: 45, cuota: 0 },
     { id: "addon-mando", name: "Mando a distancia armado/desarmado", precio: 25, cuota: 0 },
     { id: "addon-llavero", name: "Llavero de proximidad", precio: 19, cuota: 0 },
+    { id: "addon-sensor-movimiento", name: "Sensor de movimiento PIR adicional", precio: 35, cuota: 0 },
+    { id: "addon-sirena-ext", name: "Sirena exterior con flash LED", precio: 65, cuota: 0 },
+    { id: "addon-sensor-rotura", name: "Sensor de rotura de cristal", precio: 39, cuota: 0 },
+    { id: "addon-detector-inundacion", name: "Detector de inundación", precio: 32, cuota: 0 },
+    { id: "addon-detector-gas", name: "Detector de gas (butano/natural)", precio: 49, cuota: 0 },
+    { id: "addon-teclado", name: "Teclado adicional con pantalla LCD", precio: 59, cuota: 0 },
+    { id: "addon-repetidor", name: "Repetidor de señal inalámbrico", precio: 42, cuota: 0 },
+    { id: "addon-cerradura", name: "Cerradura electrónica inteligente", precio: 189, cuota: 3.90 },
+    { id: "addon-boton-panico", name: "Botón de pánico inalámbrico", precio: 22, cuota: 0 },
+    { id: "addon-sensor-perimetral", name: "Sensor perimetral de barrera IR", precio: 89, cuota: 0 },
   ];
 
   // ── Carrito de presupuesto ──────────────────────────────────────────────
@@ -1678,6 +1688,11 @@ function CatalogoView({ token, currentUser }) {
   function setQtyFor(id, value) {
     const v = Math.max(1, Math.min(99, Number(value) || 1));
     setQty(prev => ({ ...prev, [id]: v }));
+    // Si el item ya está en el carrito, actualizar su cantidad automáticamente
+    setCart(prev => {
+      if (!prev[id]) return prev;
+      return { ...prev, [id]: { ...prev[id], cantidad: v } };
+    });
   }
 
   function addToCart(item, categoria) {
@@ -1708,6 +1723,10 @@ function CatalogoView({ token, currentUser }) {
       }
       return { ...prev, [id]: { ...prev[id], cantidad } };
     });
+    // Sincronizar el selector de cantidad con el carrito
+    if (cantidad > 0) {
+      setQty(prev => ({ ...prev, [id]: cantidad }));
+    }
   }
 
   function removeFromCart(id) {
@@ -1716,6 +1735,8 @@ function CatalogoView({ token, currentUser }) {
       delete next[id];
       return next;
     });
+    // Resetear el selector de cantidad al eliminar
+    setQty(prev => ({ ...prev, [id]: 1 }));
   }
 
   const cartItems = Object.values(cart);
