@@ -1,7 +1,7 @@
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { sendPresupuestoEmail } from "../utils/email.js";
-import { crearLinkPagoPresupuesto, isStripeConfigured } from "../utils/stripe.js";
+import { crearLinkPagoViva, isVivaConfigured } from "../utils/viva.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -17,11 +17,11 @@ function siguienteNumero() {
 
 /**
  * POST /api/presupuestos/enviar
- * Genera (opcionalmente) un link de pago de Stripe con el importe total
+ * Genera (opcionalmente) un link de pago de Viva Payments con el importe total
  * y envía el presupuesto/factura por correo al cliente vía Resend.
  *
  * body: {
- *   clientName, clientEmail, clientNif, isCompany, companyName,
+ *   clientName, clientEmail, clientNif, clientPhone, isCompany, companyName,
  *   items: [{ nombre, cantidad, precioUnitario, cuotaUnitaria }],
  *   ivaPct: 0 | 21,
  *   isInvoice: boolean,
@@ -31,7 +31,7 @@ function siguienteNumero() {
 router.post("/enviar", async (req, res) => {
   try {
     const {
-      clientName, clientEmail, clientNif, isCompany, companyName,
+      clientName, clientEmail, clientNif, clientPhone, isCompany, companyName,
       items, ivaPct = 0, isInvoice = false, crearLinkPago = true,
     } = req.body || {};
 
@@ -49,12 +49,13 @@ router.post("/enviar", async (req, res) => {
     const repName = req.employee?.name || "";
 
     let paymentUrl = null;
-    if (crearLinkPago && isStripeConfigured()) {
-      const r = await crearLinkPagoPresupuesto({
+    if (crearLinkPago && isVivaConfigured()) {
+      const r = await crearLinkPagoViva({
         clientName: isCompany ? (companyName || clientName) : clientName,
         clientEmail,
         amountEur: total,
         description: `${isInvoice ? "Factura" : "Presupuesto"} ${numero} · ${items.map(i => i.nombre).join(", ")}`.slice(0, 250),
+        clientPhone: clientPhone || undefined,
       });
       if (r.ok) paymentUrl = r.url;
       else console.warn("[presupuestos] No se generó link de pago:", r.reason);
@@ -88,7 +89,7 @@ router.post("/enviar", async (req, res) => {
       ivaAmount,
       total,
       paymentUrl,
-      stripeConfigured: isStripeConfigured(),
+      vivaConfigured: isVivaConfigured(),
     });
   } catch (err) {
     console.error("[presupuestos] Error:", err);

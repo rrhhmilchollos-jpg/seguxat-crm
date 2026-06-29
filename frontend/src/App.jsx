@@ -2076,7 +2076,7 @@ function PresupuestoGenerador({ cartItems, cartCount, setCartQty, removeFromCart
 }
 
 // ============================================================
-// Modal de envío: datos del cliente, IVA, factura y link de pago Stripe.
+// Modal de envío: datos del cliente, IVA, factura y link de pago Viva.
 // ============================================================
 function EnviarPresupuestoModal({ token, currentUser, cartItems, onClose }) {
   const [clientName, setClientName] = useState("");
@@ -2088,7 +2088,7 @@ function EnviarPresupuestoModal({ token, currentUser, cartItems, onClose }) {
   const [isInvoice, setIsInvoice] = useState(false);
   const [includePaymentLink, setIncludePaymentLink] = useState(true);
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState(null); // { ok, total, paymentUrl, stripeConfigured } | { error }
+  const [result, setResult] = useState(null); // { ok, total, paymentUrl, vivaConfigured } | { error }
 
   const IVA_PCT = 21;
   const subtotal = cartItems.reduce((acc, it) => acc + it.precioUnitario * it.cantidad, 0);
@@ -2194,7 +2194,7 @@ function EnviarPresupuestoModal({ token, currentUser, cartItems, onClose }) {
                   <input type="checkbox" checked={isInvoice} onChange={e => setIsInvoice(e.target.checked)} className="w-4 h-4 accent-amber-500" />
                 </label>
                 <label className="flex items-center justify-between gap-3 text-sm text-slate-700 cursor-pointer">
-                  <span>Incluir link de pago Stripe en el correo</span>
+                  <span>Incluir enlace de pago Viva en el correo</span>
                   <input type="checkbox" checked={includePaymentLink} onChange={e => setIncludePaymentLink(e.target.checked)} className="w-4 h-4 accent-amber-500" />
                 </label>
               </div>
@@ -2231,11 +2231,11 @@ function EnviarPresupuestoModal({ token, currentUser, cartItems, onClose }) {
               </div>
               {result.paymentUrl ? (
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500 mb-4 break-all">
-                  Link de pago Stripe incluido: <a href={result.paymentUrl} target="_blank" rel="noreferrer" className="text-amber-600 font-medium">{result.paymentUrl}</a>
+                  Enlace de pago Viva incluido: <a href={result.paymentUrl} target="_blank" rel="noreferrer" className="text-indigo-600 font-medium">{result.paymentUrl}</a>
                 </div>
-              ) : includePaymentLink && !result.stripeConfigured ? (
+              ) : includePaymentLink && !result.vivaConfigured ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 mb-4">
-                  El correo se envió sin botón de pago: Stripe todavía no está configurado en el servidor (falta STRIPE_SECRET_KEY).
+                  El correo se envio sin boton de pago: Viva Payments no esta configurado en el servidor.
                 </div>
               ) : null}
               <button onClick={onClose} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl px-5 py-2.5">
@@ -2307,7 +2307,7 @@ EMPRESA — Seguxat S.L.:
 - Empresa de alarmas y seguridad en Valencia, España. Competidora directa de Verisure y Securitas Direct
 - Kits: Hogar Esencial 199€+24,90€/mes | Hogar Total 349€+34,90€/mes | Business 599€+49,90€/mes
 - Gama Sentinel: smartwatches SOS/GPS exclusivos (Classic 89€, Active 149€, Kids 79€)
-- Cuenta bancaria: Manoprotectt · IBAN BE18 9030 0915 8465 · Wise Europe
+- Pasarela de pagos: Viva Payments (Smart Checkout) · Tarjeta, Bizum, Apple Pay
 - Teléfono: 910 626 738 | Web: seguxat.es | CRM: crm.seguxat.es
 
 EQUIPO:
@@ -2478,34 +2478,93 @@ Responde en español. Sé ejecutiva y directa. Usa **negrita** para KPIs. Máxim
   );
 }
 
-function PagosView() {
-  const [copied, setCopied] = useState(null);
+function PagosView({ token }) {
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientNif, setClientNif] = useState("");
+  const [isCompany, setIsCompany] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [applyIva, setApplyIva] = useState(true);
+  const [isInvoice, setIsInvoice] = useState(false);
+  const [includePaymentLink, setIncludePaymentLink] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState(null);
+  const [items, setItems] = useState([{ nombre: "", cantidad: 1, precioUnitario: 0, cuotaUnitaria: 0 }]);
 
-  function copyToClipboard(text, field) {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(field);
-      setTimeout(() => setCopied(null), 2500);
-    });
+  const IVA_PCT = 21;
+  const subtotal = items.reduce((acc, it) => acc + (Number(it.precioUnitario) || 0) * (Number(it.cantidad) || 1), 0);
+  const cuotaMensual = items.reduce((acc, it) => acc + (Number(it.cuotaUnitaria) || 0) * (Number(it.cantidad) || 1), 0);
+  const baseImponible = subtotal + cuotaMensual;
+  const ivaAmount = applyIva ? baseImponible * (IVA_PCT / 100) : 0;
+  const total = baseImponible + ivaAmount;
+
+  const canSend = clientName.trim() && /\S+@\S+\.\S+/.test(clientEmail) && items.some(i => i.nombre.trim() && Number(i.precioUnitario) > 0);
+
+  function addItem() { setItems([...items, { nombre: "", cantidad: 1, precioUnitario: 0, cuotaUnitaria: 0 }]); }
+  function removeItem(idx) { setItems(items.filter((_, i) => i !== idx)); }
+  function updateItem(idx, field, value) { setItems(items.map((it, i) => i === idx ? { ...it, [field]: value } : it)); }
+
+  async function handleSend() {
+    if (!canSend || sending) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/presupuestos/enviar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          clientName,
+          clientEmail,
+          clientPhone: clientPhone || undefined,
+          clientNif: clientNif || undefined,
+          isCompany,
+          companyName: isCompany ? companyName : undefined,
+          items: items.filter(i => i.nombre.trim()).map(it => ({
+            nombre: it.nombre,
+            cantidad: Number(it.cantidad) || 1,
+            precioUnitario: Number(it.precioUnitario) || 0,
+            cuotaUnitaria: Number(it.cuotaUnitaria) || 0,
+          })),
+          ivaPct: applyIva ? IVA_PCT : 0,
+          isInvoice,
+          crearLinkPago: includePaymentLink,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) setResult({ error: data.error || "No se pudo enviar el presupuesto." });
+      else setResult(data);
+    } catch (e) {
+      setResult({ error: "Error de conexion con el servidor." });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function resetForm() {
+    setClientName(""); setClientEmail(""); setClientPhone(""); setClientNif("");
+    setIsCompany(false); setCompanyName(""); setResult(null);
+    setItems([{ nombre: "", cantidad: 1, precioUnitario: 0, cuotaUnitaria: 0 }]);
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="max-w-4xl space-y-5">
 
-      {/* Hero banner */}
+      {/* Hero banner - Viva Payments */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 flex items-center gap-5">
-        <div className="absolute inset-0 opacity-10" style={{backgroundImage:"radial-gradient(circle at 80% 50%, #10b981 0%, transparent 60%)"}} />
-        <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center shrink-0">
-          <Banknote className="w-8 h-8 text-emerald-400" />
+        <div className="absolute inset-0 opacity-10" style={{backgroundImage:"radial-gradient(circle at 80% 50%, #6366f1 0%, transparent 60%)"}} />
+        <div className="w-16 h-16 bg-indigo-500/20 border border-indigo-500/30 rounded-2xl flex items-center justify-center shrink-0">
+          <CreditCard className="w-8 h-8 text-indigo-400" />
         </div>
         <div className="flex-1">
-          <div className="text-white text-xl font-bold">Manoprotectt</div>
-          <div className="text-slate-400 text-sm mt-0.5">Cuenta de cobros · Seguxat S.L.</div>
+          <div className="text-white text-xl font-bold">Viva Payments</div>
+          <div className="text-slate-400 text-sm mt-0.5">Pasarela de pagos · Seguxat S.L.</div>
           <div className="flex items-center gap-3 mt-2">
-            <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />Cuenta activa</span>
+            <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />Activa</span>
             <span className="text-slate-600 text-xs">·</span>
-            <span className="text-xs text-slate-400">Wise Europe SA · Bruselas</span>
+            <span className="text-xs text-slate-400">Smart Checkout</span>
             <span className="text-slate-600 text-xs">·</span>
-            <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">SEPA · +100 países</span>
+            <span className="text-xs bg-indigo-900/50 text-indigo-400 border border-indigo-800 px-2 py-0.5 rounded-full">Tarjeta · Bizum · Apple Pay</span>
           </div>
         </div>
         <div className="text-right shrink-0">
@@ -2514,76 +2573,156 @@ function PagosView() {
         </div>
       </div>
 
-      {/* Aviso confidencial */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
-        <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
-        <p className="text-xs text-amber-800"><strong>Uso interno exclusivo.</strong> Comparte estos datos únicamente con clientes para gestionar pagos. No los difundas por canales no seguros.</p>
+      {/* Info */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+        <p className="text-xs text-indigo-800"><strong>Genera presupuestos con enlace de pago.</strong> El cliente recibe un email con un boton para pagar con tarjeta de forma segura a traves de Viva Payments.</p>
       </div>
 
-      {/* Grid de datos bancarios */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { key:"titular", label:"Titular", value:"Manoprotectt", copy:"Manoprotectt", icon:"👤", big:false },
-          { key:"iban", label:"IBAN", value:"BE18 9030 0915 8465", copy:"BE18903009158465", icon:"🏦", big:true, badge:"SEPA" },
-          { key:"swift", label:"SWIFT / BIC", value:"TRWIBEB1XXX", copy:"TRWIBEB1XXX", icon:"🌐", big:false, note:"Transferencias internacionales" },
-          { key:"banco", label:"Entidad bancaria", value:"Wise Europe SA", copy:"Wise Europe SA", icon:"🏛️", big:false },
-        ].map(c => (
-          <div key={c.key} className={`bg-white border border-slate-200 rounded-2xl p-4 hover:border-slate-300 hover:shadow-sm transition group ${c.big ? "col-span-2" : ""}`}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-1.5">{c.icon} {c.label}</div>
-                <div className={`font-bold font-mono text-slate-900 tracking-wider ${c.big ? "text-2xl" : "text-base"}`}>{c.value}</div>
-                {c.note && <div className="text-xs text-slate-400 mt-1">{c.note}</div>}
-                {c.badge && <span className="inline-block mt-1.5 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">{c.badge}</span>}
-              </div>
-              <button onClick={() => copyToClipboard(c.copy, c.key)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${copied===c.key ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200 group-hover:bg-slate-200"}`}>
-                {copied===c.key ? <><CheckCircle2 className="w-3.5 h-3.5" />Copiado</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
-              </button>
-            </div>
+      {result?.ok ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center">
+          <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <CheckCircle2 className="w-7 h-7 text-emerald-600" />
           </div>
-        ))}
-      </div>
-
-      {/* Dirección del banco */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-4">
-        <div>
-          <div className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-1">📍 Dirección del banco</div>
-          <div className="text-sm font-medium text-slate-700">Wise Europe SA, Rue du Trône 100, 3rd floor, Brussels, 1050, Belgium</div>
-          <div className="text-xs text-slate-400 mt-0.5">Necesaria para algunos remitentes internacionales</div>
+          <div className="font-bold text-slate-900 mb-1">{isInvoice ? "Factura" : "Presupuesto"} enviado correctamente</div>
+          <div className="text-sm text-slate-500 mb-4">
+            N.{result.numero} · {result.total?.toFixed(2).replace(".",",")} EUR enviados a {clientEmail}
+          </div>
+          {result.paymentUrl ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500 mb-4 break-all">
+              Enlace de pago Viva: <a href={result.paymentUrl} target="_blank" rel="noreferrer" className="text-indigo-600 font-medium">{result.paymentUrl}</a>
+            </div>
+          ) : includePaymentLink && !result.vivaConfigured ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 mb-4">
+              El correo se envio sin boton de pago: Viva Payments no esta configurado en el servidor.
+            </div>
+          ) : null}
+          <button onClick={resetForm} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl px-5 py-2.5">
+            Crear otro presupuesto
+          </button>
         </div>
-        <button onClick={() => copyToClipboard("Wise Europe SA, Rue du Trône 100, 3rd floor, Brussels, 1050, Belgium","dir")}
-          className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${copied==="dir" ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
-          {copied==="dir" ? <><CheckCircle2 className="w-3.5 h-3.5" />Copiado</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
-        </button>
-      </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Send className="w-5 h-5 text-slate-700" />
+            <div className="font-bold text-slate-900">Nuevo presupuesto con enlace de pago</div>
+          </div>
 
-      {/* Guión para el agente */}
+          {/* Tipo de cliente */}
+          <div className="flex gap-2">
+            <button onClick={() => setIsCompany(false)}
+              className={`flex-1 text-sm font-medium rounded-xl px-3 py-2.5 border ${!isCompany ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+              Particular
+            </button>
+            <button onClick={() => setIsCompany(true)}
+              className={`flex-1 text-sm font-medium rounded-xl px-3 py-2.5 border ${isCompany ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+              Empresa
+            </button>
+          </div>
+
+          {isCompany && (
+            <input value={companyName} onChange={e => setCompanyName(e.target.value)}
+              placeholder="Nombre de la empresa"
+              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <input value={clientName} onChange={e => setClientName(e.target.value)}
+              placeholder={isCompany ? "Persona de contacto" : "Nombre del cliente"}
+              className="border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            <input value={clientEmail} onChange={e => setClientEmail(e.target.value)} type="email"
+              placeholder="Email del cliente"
+              className="border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} type="tel"
+              placeholder="Telefono (opcional)"
+              className="border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            <input value={clientNif} onChange={e => setClientNif(e.target.value)}
+              placeholder={isCompany ? "CIF de la empresa" : "NIF/DNI (opcional)"}
+              className="border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+
+          {/* Productos/servicios */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-700">Productos / Servicios</div>
+              <button onClick={addItem} className="text-xs text-indigo-600 font-semibold hover:text-indigo-800">+ Anadir linea</button>
+            </div>
+            {items.map((item, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                <input value={item.nombre} onChange={e => updateItem(idx, "nombre", e.target.value)}
+                  placeholder="Nombre del producto/servicio"
+                  className="col-span-5 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                <input value={item.cantidad} onChange={e => updateItem(idx, "cantidad", e.target.value)} type="number" min="1"
+                  placeholder="Ud."
+                  className="col-span-1 border border-slate-300 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                <input value={item.precioUnitario} onChange={e => updateItem(idx, "precioUnitario", e.target.value)} type="number" step="0.01" min="0"
+                  placeholder="Precio EUR"
+                  className="col-span-2 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                <input value={item.cuotaUnitaria} onChange={e => updateItem(idx, "cuotaUnitaria", e.target.value)} type="number" step="0.01" min="0"
+                  placeholder="Cuota/mes"
+                  className="col-span-2 border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                <button onClick={() => removeItem(idx)} className="col-span-2 text-red-400 hover:text-red-600 text-xs font-medium">
+                  {items.length > 1 ? "Eliminar" : ""}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Opciones */}
+          <div className="space-y-2.5 pt-1">
+            <label className="flex items-center justify-between gap-3 text-sm text-slate-700 cursor-pointer">
+              <span>Aplicar IVA (21%)</span>
+              <input type="checkbox" checked={applyIva} onChange={e => setApplyIva(e.target.checked)} className="w-4 h-4 accent-indigo-500" />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm text-slate-700 cursor-pointer">
+              <span>Emitir como factura (en lugar de presupuesto)</span>
+              <input type="checkbox" checked={isInvoice} onChange={e => setIsInvoice(e.target.checked)} className="w-4 h-4 accent-indigo-500" />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm text-slate-700 cursor-pointer">
+              <span>Incluir enlace de pago Viva en el correo</span>
+              <input type="checkbox" checked={includePaymentLink} onChange={e => setIncludePaymentLink(e.target.checked)} className="w-4 h-4 accent-indigo-500" />
+            </label>
+          </div>
+
+          {/* Resumen de importes */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 text-sm space-y-1.5">
+            <div className="flex justify-between text-slate-500"><span>Subtotal productos</span><span className="tabular-nums">{subtotal.toFixed(2).replace(".",",")} EUR</span></div>
+            {cuotaMensual > 0 && <div className="flex justify-between text-slate-500"><span>Cuota mensual</span><span className="tabular-nums">{cuotaMensual.toFixed(2).replace(".",",")} EUR/mes</span></div>}
+            <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="tabular-nums">{baseImponible.toFixed(2).replace(".",",")} EUR</span></div>
+            <div className="flex justify-between text-slate-500"><span>IVA {applyIva ? `(${IVA_PCT}%)` : "(no aplicado)"}</span><span className="tabular-nums">{ivaAmount.toFixed(2).replace(".",",")} EUR</span></div>
+            <div className="flex justify-between font-bold text-slate-900 pt-1.5 border-t border-slate-200"><span>Total a cobrar</span><span className="tabular-nums">{total.toFixed(2).replace(".",",")} EUR</span></div>
+          </div>
+
+          {result?.error && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              {result.error}
+            </div>
+          )}
+
+          <button onClick={handleSend} disabled={!canSend || sending}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl px-5 py-3">
+            {sending ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</> : <><Send className="w-4 h-4" />{isInvoice ? "Enviar factura" : "Enviar presupuesto"} con enlace de pago</>}
+          </button>
+        </div>
+      )}
+
+      {/* Guion para el agente */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
             <Phone className="w-4 h-4 text-white" />
           </div>
           <div>
-            <div className="text-sm font-bold text-slate-900">Guión para informar al cliente</div>
-            <div className="text-xs text-slate-400">Léelo o copia los datos directamente</div>
+            <div className="text-sm font-bold text-slate-900">Guion para informar al cliente</div>
+            <div className="text-xs text-slate-400">Leelo o adaptalo a la conversacion</div>
           </div>
         </div>
-        <div className="bg-slate-900 rounded-xl p-4 text-sm text-slate-300 leading-relaxed mb-4">
+        <div className="bg-slate-900 rounded-xl p-4 text-sm text-slate-300 leading-relaxed">
           <span className="text-slate-500 text-xs block mb-2">— AGENTE —</span>
-          "Para realizar el pago del alta o de su cuota mensual, puede hacer una transferencia bancaria a nombre de <span className="text-emerald-400 font-semibold">Manoprotectt</span>, con IBAN <span className="text-emerald-400 font-semibold font-mono">BE18 9030 0915 8465</span>. La entidad es Wise Europe. Si necesita el código SWIFT para transferencias internacionales, es <span className="text-emerald-400 font-semibold font-mono">TRWIBEB1XXX</span>. En el concepto de la transferencia, indique por favor su nombre completo y número de contrato."
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { label:"📋 Copiar IBAN", value:"BE18903009158465", key:"q1" },
-            { label:"👤 Copiar titular", value:"Manoprotectt", key:"q2" },
-            { label:"🌐 Copiar SWIFT", value:"TRWIBEB1XXX", key:"q3" },
-          ].map(btn => (
-            <button key={btn.key} onClick={() => copyToClipboard(btn.value, btn.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition ${copied===btn.key ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400"}`}>
-              {copied===btn.key ? <><CheckCircle2 className="w-3.5 h-3.5" /> ¡Copiado!</> : btn.label}
-            </button>
-          ))}
+          "Perfecto, le voy a enviar ahora mismo un presupuesto detallado a su correo electronico con todos los productos y servicios que hemos comentado. En ese mismo correo tendra un <span className="text-indigo-400 font-semibold">boton de pago seguro</span> para que pueda realizar el pago con tarjeta de forma comoda y rapida. El pago se procesa a traves de <span className="text-indigo-400 font-semibold">Viva Payments</span>, una pasarela europea certificada. Si tiene cualquier duda, no dude en contactarnos."
         </div>
       </div>
     </div>
@@ -3803,7 +3942,7 @@ export default function SeguxatCRM() {
     agenda: <AgendaView currentUser={currentUser} instalaciones={instalaciones} setInstalaciones={setInstalaciones} leads={leads} token={token} autoLead={agendaAutoLead} clearAutoLead={() => setAgendaAutoLead(null)} />,
     clientes: <ClientesView instalaciones={instalaciones} />,
     catalogo: <CatalogoView token={token} currentUser={currentUser} />,
-    pagos: <PagosView />,
+    pagos: <PagosView token={token} />,
     agente: <AgenteView leads={leads} instalaciones={instalaciones} token={token} />,
     comerciales: <ComercialesView token={token} leads={leads} />,
     empleados: <EmpleadosView token={token} currentUser={currentUser} />,

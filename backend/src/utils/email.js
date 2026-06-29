@@ -122,7 +122,7 @@ export async function sendAriaUrgentAlert({ employeeName, employeeEmail, userMes
 
 /**
  * Envía al cliente el presupuesto (o factura) generado en el Catálogo,
- * con desglose de líneas, IVA opcional y, si Stripe está configurado,
+ * con desglose de líneas, IVA opcional y, si Viva Payments está configurado,
  * un botón de pago directo con el importe total.
  */
 export async function sendPresupuestoEmail({
@@ -204,7 +204,7 @@ export async function sendPresupuestoEmail({
           <a href="${paymentUrl}" style="display:inline-block;background:#f5a623;color:#0d2240;font-weight:bold;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:15px;">
             💳 Pagar ${fmt(total)} € ahora
           </a>
-          <div style="color:#94a3b8;font-size:11px;margin-top:8px;">Pago seguro procesado por Stripe</div>
+          <div style="color:#94a3b8;font-size:11px;margin-top:8px;">Pago seguro procesado por Viva Payments</div>
         </div>` : ""}
 
         <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:11px;">

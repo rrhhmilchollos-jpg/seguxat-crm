@@ -14,8 +14,8 @@ function fallbackResponse(userMsg, employeeName) {
     return `Hola ${nombre}. Para gestionar leads y citas, ve a la sección **Citas** del menú. Puedes avanzar cualquier lead y usar "Agendar cita" para asignar comercial o técnico. ¿Qué necesitas exactamente?`;
   if (msg.includes("agenda") || msg.includes("instalaci") || msg.includes("técnico") || msg.includes("tecnico"))
     return `Hola ${nombre}. En **Agenda** ves todas las instalaciones por fecha, filtras por técnico o coordinadora y asignas nuevas citas. Los técnicos se sugieren por zona del cliente. ¿Qué instalación gestionas?`;
-  if (msg.includes("pago") || msg.includes("iban") || msg.includes("cuenta") || msg.includes("banco"))
-    return `Hola ${nombre}. Los datos bancarios están en **Pagos**: IBAN **BE18 9030 0915 8465**, titular **Manoprotectt** (Wise Europe). Cópialo desde esa sección para dárselo al cliente.`;
+  if (msg.includes("pago") || msg.includes("iban") || msg.includes("cuenta") || msg.includes("banco") || msg.includes("cobr"))
+    return `Hola ${nombre}. Para cobrar a un cliente, ve a la sección **Pagos** y genera un presupuesto con enlace de pago. El cliente recibirá un email con un botón para pagar con tarjeta de forma segura a través de Viva Payments. ¿Necesitas ayuda con algo más?`;
   if (msg.includes("resumen") || msg.includes("facturaci") || msg.includes("mrr"))
     return `Hola ${nombre}. Seguxat tiene **8.247 clientes activos**, **58.400 €/mes** de MRR y 74% de conversión. El detalle completo está en **Resumen**. ¿Qué métrica necesitas?`;
   if (msg.includes("kit") || msg.includes("precio") || msg.includes("producto"))
